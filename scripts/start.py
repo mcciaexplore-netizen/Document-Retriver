@@ -47,9 +47,9 @@ def main() -> int:
     settings["NEXT_TELEMETRY_DISABLED"] = "1"
     settings.setdefault("CORS_ORIGINS", f"{frontend_url},http://localhost:{frontend_port}")
     node = shutil.which("node")
-    next_cli = ROOT / "frontend/node_modules/next/dist/bin/next"
+    next_cli = ROOT / "node_modules/next/dist/bin/next"
     if not node or not next_cli.is_file():
-        raise RuntimeError("Install Node.js and run npm --prefix frontend ci first.")
+        raise RuntimeError("Install Node.js and run npm ci in the project root first.")
     children: list[subprocess.Popen] = []
 
     def start(command, directory):
@@ -78,7 +78,7 @@ def main() -> int:
         if not healthy(frontend_url):
             if occupied(frontend_port):
                 raise RuntimeError(f"Port {frontend_port} is busy but its document API is unavailable. Stop the old frontend and run this launcher again.")
-            child = start([node, str(next_cli), "dev", "--hostname", "127.0.0.1", "--port", str(frontend_port)], ROOT / "frontend")
+            child = start([node, str(next_cli), "dev", "--hostname", "127.0.0.1", "--port", str(frontend_port)], ROOT)
             wait_ready(frontend_url, child)
         print(f"App ready: {frontend_url} (frontend API connection verified). Press Ctrl+C to stop services started here.", flush=True)
         while children:

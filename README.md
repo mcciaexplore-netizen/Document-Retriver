@@ -4,7 +4,7 @@ Private enterprise search, evidence retrieval, and audit for MSMEs and MCCIA tea
 
 The project lives directly in **Doc-retriver/**.
 
-For hosted deployment, see **[DEPLOYMENT.md](DEPLOYMENT.md)**. In Vercel select **`frontend`** as the Root Directory and set `BACKEND_URL` to your deployed backend origin. The optional root `render.yaml` configures a persistent backend service.
+For hosted deployment, see **[DEPLOYMENT.md](DEPLOYMENT.md)**. In Vercel select **`.` (repository root)** as the Root Directory and set `BACKEND_URL` to your deployed backend origin. The optional root `render.yaml` configures a persistent backend service.
 
 ## Start with Docker
 
@@ -75,14 +75,14 @@ source .venv/bin/activate
 # .\.venv\Scripts\Activate.ps1
 
 python -m pip install -r backend/requirements.txt
-npm --prefix frontend ci
+npm ci
 
 cd backend
 python -m alembic upgrade head
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-In a second terminal, run `npm --prefix frontend run dev` from the project root. Manual commands use backend defaults; export environment variables into the process when overriding them. On macOS/Linux, use `python3` if `python` is not available. Do not commit private uploads, local databases, or `.env`; they are excluded by `.gitignore`.
+In a second terminal, run `npm run dev` from the project root. Manual commands use backend defaults; export environment variables into the process when overriding them. On macOS/Linux, use `python3` if `python` is not available. Do not commit private uploads, local databases, or `.env`; they are excluded by `.gitignore`.
 
 ## Product workflow
 
@@ -114,7 +114,12 @@ FastAPI backend :8000
 
 ```text
 Doc-retriver/
-  frontend/             Next.js, TypeScript, Tailwind, Lucide UI
+  app/                  Next.js pages and layout (Vercel root application)
+  components/           React UI components
+  lib/                  Frontend API client
+  public/               Static assets
+  package.json          Frontend dependencies and npm commands
+  vercel.json           Vercel deployment configuration
   backend/              FastAPI API, models, parsers, search, migrations
   storage/              Local original documents (private, not committed)
   scripts/              Setup and development launch scripts
@@ -231,7 +236,7 @@ For a deployment beyond localhost, place the frontend behind an HTTPS reverse pr
 
 Google Drive and scheduled local/network folder synchronization are documented integration placeholders. They are shown transparently in Data Sources and do not imply an active connection. Folder selection provides immediate file import. An air-gapped installation requires that Python packages, Node packages, and Docker images be supplied beforehand.
 
-The [official MCCIA logo](https://www.mcciapune.com/static/assets/images/logos/logo-mccia-white-blue-new.png), discovered on the MCCIA website, is bundled locally at `frontend/public/mccia-logo.png`. The application does not need an external image request to display its branding.
+The [official MCCIA logo](https://www.mcciapune.com/static/assets/images/logos/logo-mccia-white-blue-new.png), discovered on the MCCIA website, is bundled locally at `public/mccia-logo.png`. The application does not need an external image request to display its branding.
 
 ## Verification
 
@@ -240,7 +245,7 @@ The [official MCCIA logo](https://www.mcciapune.com/static/assets/images/logos/l
 .\.venv\Scripts\python.exe -m pytest backend/tests -q
 
 # Frontend type checking and production build
-npm --prefix frontend run build
+npm run build
 
 # Running application: all four formats through the frontend API proxy
 .\.venv\Scripts\python.exe scripts/smoke_test.py --url http://localhost:3000

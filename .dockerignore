@@ -13,3 +13,7 @@ storage
 **/*.log
 test-results
 playwright-report
+.next
+*.tsbuildinfo
+backend
+scripts

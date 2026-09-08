@@ -4,11 +4,14 @@ The repository contains two services:
 
 ```text
 Document-Retriver/
-  frontend/          Next.js application: select this folder in Vercel
-    package.json
-    vercel.json
-    next.config.ts
-    app/
+  package.json       Next.js application at repository root
+  package-lock.json
+  vercel.json        Vercel configuration
+  next.config.ts
+  app/               Pages and application layout
+  components/        UI components
+  lib/               Frontend API client
+  public/            Static assets
   backend/           FastAPI application: deploy on a persistent server
     requirements.txt
     app/
@@ -18,7 +21,7 @@ Document-Retriver/
 
 ## 1. Deploy the backend
 
-This backend uses background document processing, a database, and local uploaded files. Its current storage design needs a persistent server and disk. Moving both folders to the root does not make those requirements disappear.
+The frontend deploys from the repository root. The backend uses background document processing, a database, and local uploaded files; its current storage design needs a separate persistent server and disk.
 
 One supported configuration is provided in `render.yaml`. In Render, create a **Blueprint**, connect this GitHub repository, and select that file. This configuration selects a **paid Starter service with a persistent disk**; review the displayed cost before deploying.
 
@@ -42,14 +45,16 @@ Import this repository, then use these settings:
 
 | Setting | Value |
 | --- | --- |
-| Root Directory | **`frontend`** |
+| Root Directory | **`.` (repository root)** |
 | Framework Preset | **Next.js** |
 | Install Command | `npm ci` |
 | Build Command | `npm run build` |
 | Output Directory | Leave the Next.js default |
 | Node.js Version | **22.x** |
 
-In the Root Directory dialog, choose the radio button beside **frontend**, then Continue. The `frontend/vercel.json` file supplies the framework and commands.
+In the Root Directory dialog, choose the radio button beside **Document-Retriver (root)**, then Continue. The `vercel.json` file supplies the framework and commands.
+
+If this Vercel project previously used `frontend` as its Root Directory, change it to the repository root and redeploy the latest commit. The `frontend` folder has been removed. The backend is excluded from Vercel uploads by `.vercelignore`.
 
 Add `BACKEND_URL=https://YOUR-BACKEND.onrender.com` in Vercel's Environment Variables before deploying. Use the backend's actual public URL with no `/api` suffix. Apply it to each environment you deploy. Localhost addresses refer to Vercel's machine, not your computer.
 

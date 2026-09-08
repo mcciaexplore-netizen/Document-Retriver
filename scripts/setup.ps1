@@ -43,7 +43,7 @@ if (Test-Path -LiteralPath $localUv) {
     & $venvPython -m pip install -r backend/requirements.txt
 }
 if ($LASTEXITCODE -ne 0) { throw 'Python dependency installation failed.' }
-& npm.cmd --prefix frontend ci
+& npm.cmd ci
 if ($LASTEXITCODE -ne 0) { throw 'Frontend dependency installation failed.' }
 
 Write-Host ''
