@@ -5,9 +5,9 @@ import secrets
 from datetime import timedelta
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from .database import get_db
-from .models import User, LoginSession, Membership, Workspace, utcnow
-from .config import SESSION_HOURS
+from database import get_db
+from models import User, LoginSession, Membership, Workspace, utcnow
+from config import SESSION_HOURS
 
 
 def hash_password(password):

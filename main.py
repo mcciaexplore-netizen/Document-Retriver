@@ -22,13 +22,13 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 from openpyxl.utils import column_index_from_string
 
-from . import config
-from .database import SessionLocal, engine, get_db, init_db
-from .indexing import process_file, storage_file
-from .models import AuditLog, File, LoginSession, Membership, PDFPage, PresentationSlide, ProcessingJob, SearchHistory, SearchRecord, User, Workspace, utcnow
-from .schemas import LoginInput, MembershipInput, PasswordInput, RegisterInput, SearchInput, UserInput, WorkspaceInput
-from .search_engine import citation_text, iso, location_for, result_json, run_search
-from .security import check_workspace, create_session, current_user, hash_password, require_admin, require_editor, token_hash, verify_password, visible_workspace_ids
+import config
+from database import SessionLocal, engine, get_db, init_db
+from indexing import process_file, storage_file
+from models import AuditLog, File, LoginSession, Membership, PDFPage, PresentationSlide, ProcessingJob, SearchHistory, SearchRecord, User, Workspace, utcnow
+from schemas import LoginInput, MembershipInput, PasswordInput, RegisterInput, SearchInput, UserInput, WorkspaceInput
+from search_engine import citation_text, iso, location_for, result_json, run_search
+from security import check_workspace, create_session, current_user, hash_password, require_admin, require_editor, token_hash, verify_password, visible_workspace_ids
 
 logger = logging.getLogger(__name__)
 login_attempts = defaultdict(deque)
@@ -48,7 +48,7 @@ async def lifespan(_app):
                 file.processing_status, file.error = "failed", job.error
         db.query(LoginSession).filter(LoginSession.expires_at < utcnow()).delete(synchronize_session=False)
         db.commit()
-    from .seed import bootstrap
+    from seed import bootstrap
     bootstrap()
     yield
 

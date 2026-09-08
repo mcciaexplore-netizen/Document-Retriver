@@ -11,11 +11,11 @@ from openpyxl.styles import Font, PatternFill, Alignment
 from pptx import Presentation
 from pptx.util import Inches, Pt
 
-from . import config
-from .database import SessionLocal
-from .indexing import process_file
-from .models import AuditLog, File, Membership, ProcessingJob, User, Workspace
-from .security import hash_password
+import config
+from database import SessionLocal
+from indexing import process_file
+from models import AuditLog, File, Membership, ProcessingJob, User, Workspace
+from security import hash_password
 
 
 def demo_xlsx():

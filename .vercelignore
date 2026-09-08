@@ -1,4 +1,10 @@
-backend/
+*.py
+requirements.txt
+alembic.ini
+pytest.ini
+migrations/
+tests/
+Dockerfile.backend
 scripts/
 storage/
 .tools/

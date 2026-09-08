@@ -18,7 +18,8 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: Dockerfile.backend
     restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mccia}:${POSTGRES_PASSWORD:-mccia_local_dev}@postgres:5432/${POSTGRES_DB:-mccia}

@@ -15,5 +15,4 @@ test-results
 playwright-report
 .next
 *.tsbuildinfo
-backend
 scripts

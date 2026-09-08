@@ -4,9 +4,8 @@ services:
     name: document-retriever-api
     runtime: python
     plan: starter
-    rootDir: backend
     buildCommand: pip install -r requirements.txt
-    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     disk:
       name: document-data

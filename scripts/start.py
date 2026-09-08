@@ -71,8 +71,8 @@ def main() -> int:
         if not healthy(backend_url):
             if occupied(backend_port):
                 raise RuntimeError(f"Port {backend_port} belongs to another service. Change BACKEND_PORT in .env.")
-            subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=ROOT / "backend", env=settings, check=True)
-            child = start([sys.executable, "-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", str(backend_port)], ROOT / "backend")
+            subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=ROOT, env=settings, check=True)
+            child = start([sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", str(backend_port)], ROOT)
             wait_ready(backend_url, child)
         print(f"Backend ready: {backend_url}", flush=True)
         if not healthy(frontend_url):

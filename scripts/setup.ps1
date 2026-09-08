@@ -38,9 +38,9 @@ if ($LASTEXITCODE -ne 0) {
     throw 'The project Python cannot run. If Windows Application Control blocks it, use an approved Python installation, then run .\scripts\setup.ps1 -Python C:\path\to\python.exe.'
 }
 if (Test-Path -LiteralPath $localUv) {
-    & $localUv pip install --python $venvPython -r backend/requirements.txt
+    & $localUv pip install --python $venvPython -r requirements.txt
 } else {
-    & $venvPython -m pip install -r backend/requirements.txt
+    & $venvPython -m pip install -r requirements.txt
 }
 if ($LASTEXITCODE -ne 0) { throw 'Python dependency installation failed.' }
 & npm.cmd ci

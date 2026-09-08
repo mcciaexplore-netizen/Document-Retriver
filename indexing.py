@@ -1,9 +1,9 @@
 import logging
 from pathlib import Path
-from .config import STORAGE_PATH
-from .database import SessionLocal
-from .models import File, ProcessingJob, SearchRecord, SpreadsheetCell, PDFPage, PresentationSlide, utcnow
-from .parsers import parse_file
+from config import STORAGE_PATH
+from database import SessionLocal
+from models import File, ProcessingJob, SearchRecord, SpreadsheetCell, PDFPage, PresentationSlide, utcnow
+from parsers import parse_file
 
 logger = logging.getLogger(__name__)
 

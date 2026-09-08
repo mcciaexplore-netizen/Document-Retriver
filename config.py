@@ -2,8 +2,9 @@ import os
 from pathlib import Path
 
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./mccia.db")
-STORAGE_PATH = Path(os.getenv("STORAGE_PATH", "../storage")).resolve()
+PROJECT_ROOT = Path(__file__).resolve().parent
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///" + (PROJECT_ROOT / "mccia.db").as_posix())
+STORAGE_PATH = Path(os.getenv("STORAGE_PATH", str(PROJECT_ROOT / "storage"))).resolve()
 CORS_ORIGINS = [s.strip() for s in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",") if s.strip()]
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "25"))
 SEARCH_RESULT_LIMIT = int(os.getenv("SEARCH_RESULT_LIMIT", "100"))

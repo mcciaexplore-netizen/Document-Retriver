@@ -4,8 +4,8 @@ import re
 from datetime import datetime, time, timedelta
 from fastapi import HTTPException
 from sqlalchemy import and_, or_, not_, text, func, bindparam, literal_column
-from .models import File, SearchRecord, utcnow
-from .config import SEARCH_RESULT_LIMIT
+from models import File, SearchRecord, utcnow
+from config import SEARCH_RESULT_LIMIT
 
 
 def iso(value):

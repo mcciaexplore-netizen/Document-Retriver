@@ -1,7 +1,7 @@
 """Initial enterprise document schema and native full-text indexes."""
 from alembic import op
-from app.database import Base, install_search_index
-from app import models
+from database import Base, install_search_index
+import models
 
 revision = "0001_initial"
 down_revision = None

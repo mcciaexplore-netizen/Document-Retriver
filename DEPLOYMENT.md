@@ -12,9 +12,15 @@ Document-Retriver/
   components/        UI components
   lib/               Frontend API client
   public/            Static assets
-  backend/           FastAPI application: deploy on a persistent server
-    requirements.txt
-    app/
+  main.py            FastAPI application entry point
+  config.py          Backend settings
+  database.py        Database connection
+  models.py          Database models
+  requirements.txt   Python dependencies
+  alembic.ini        Migration settings
+  migrations/        Versioned database upgrades
+  tests/             Backend verification
+  Dockerfile.backend Backend container build
   render.yaml        Optional Render backend blueprint
   scripts/           Local development tools
 ```
@@ -22,6 +28,8 @@ Document-Retriver/
 ## 1. Deploy the backend
 
 The frontend deploys from the repository root. The backend uses background document processing, a database, and local uploaded files; its current storage design needs a separate persistent server and disk.
+
+The backend also runs from the repository root, with entry point `main:app`. For an existing Render service, clear its previous `backend` Root Directory setting and use `alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT` as its Start Command. There is no `backend` directory now.
 
 One supported configuration is provided in `render.yaml`. In Render, create a **Blueprint**, connect this GitHub repository, and select that file. This configuration selects a **paid Starter service with a persistent disk**; review the displayed cost before deploying.
 

@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine, event, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-from .config import DATABASE_URL
+from config import DATABASE_URL
 
 
 class Base(DeclarativeBase):
@@ -36,7 +36,7 @@ def install_search_index(connection):
 
 
 def init_db():
-    from . import models  # noqa: F401
+    import models  # noqa: F401
     Base.metadata.create_all(engine)
     with engine.begin() as connection:
         install_search_index(connection)

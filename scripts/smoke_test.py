@@ -1,7 +1,7 @@
 """Exercise a running MCCIA deployment through its public HTTP API.
 
 Creates real XLSX, CSV, PDF, and PPTX documents, then removes only the workspace
-created by this run. Install backend/requirements.txt before running this script.
+created by this run. Install requirements.txt before running this script.
 """
 from __future__ import annotations
 

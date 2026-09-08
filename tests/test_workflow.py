@@ -2,10 +2,10 @@ import csv
 import io
 import json
 from fastapi.testclient import TestClient
-from app.main import app
-from app.seed import demo_xlsx, demo_pdf, demo_pptx
-from app.database import SessionLocal
-from app.models import SearchRecord, SpreadsheetCell
+from main import app
+from seed import demo_xlsx, demo_pdf, demo_pptx
+from database import SessionLocal
+from models import SearchRecord, SpreadsheetCell
 
 
 def upload(client, workspace_id, name, data):

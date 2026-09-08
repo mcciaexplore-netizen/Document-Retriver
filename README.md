@@ -61,7 +61,7 @@ Start the services in two terminals:
 .\scripts\start-frontend.ps1
 ```
 
-Then open **http://localhost:3000**. The scripts load the root `.env` without evaluating it as code. Backend data defaults to `backend/mccia.db`; original documents are stored in `storage/`. Press Ctrl+C in each terminal to stop it.
+Then open **http://localhost:3000**. The scripts load the root `.env` without evaluating it as code. Backend data defaults to `mccia.db`; original documents are stored in `storage/`. Press Ctrl+C in each terminal to stop it.
 
 If PowerShell blocks local scripts, use the equivalent commands below or start a task-specific PowerShell process with an execution policy permitted by your organization.
 
@@ -74,12 +74,11 @@ source .venv/bin/activate
 # Windows PowerShell instead:
 # .\.venv\Scripts\Activate.ps1
 
-python -m pip install -r backend/requirements.txt
+python -m pip install -r requirements.txt
 npm ci
 
-cd backend
 python -m alembic upgrade head
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
 In a second terminal, run `npm run dev` from the project root. Manual commands use backend defaults; export environment variables into the process when overriding them. On macOS/Linux, use `python3` if `python` is not available. Do not commit private uploads, local databases, or `.env`; they are excluded by `.gitignore`.
@@ -120,7 +119,11 @@ Doc-retriver/
   public/               Static assets
   package.json          Frontend dependencies and npm commands
   vercel.json           Vercel deployment configuration
-  backend/              FastAPI API, models, parsers, search, migrations
+  main.py               FastAPI entry point; backend modules live at root
+  requirements.txt      Backend dependencies
+  migrations/           Database migrations
+  tests/                Backend tests
+  Dockerfile.backend    Backend container build
   storage/              Local original documents (private, not committed)
   scripts/              Setup and development launch scripts
   docker-compose.yml    Frontend, backend, PostgreSQL, persistent volumes
@@ -209,7 +212,7 @@ File upload uses multipart fields `workspace_id`, repeated `files`, and optional
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `DATABASE_URL` | `sqlite:///./mccia.db` locally | SQLAlchemy database URL; Compose supplies PostgreSQL |
-| `STORAGE_PATH` | `../storage` locally | Directory for original uploaded files |
+| `STORAGE_PATH` | Project-root `storage/` locally | Directory for original uploaded files |
 | `POSTGRES_DB` / `POSTGRES_USER` | `mccia` | Compose PostgreSQL bootstrap settings |
 | `POSTGRES_PASSWORD` | `mccia_local_dev` | Compose PostgreSQL password; use URL-safe characters or URL-encode in a custom database URL |
 | `FRONTEND_PORT` / `BACKEND_PORT` | `3000` / `8000` | Local published ports |
@@ -232,7 +235,7 @@ Next.js rewrite destinations are fixed during a production build. Rebuild the fr
 
 Passwords use salted scrypt hashing. Sessions use random tokens whose hashes are stored server-side; cookies are HTTP-only. File endpoints require authentication, and workspace membership is checked by the backend. Admins manage workspaces and delete files; managers can upload, re-index, search, and access audit activity; viewers can search, inspect sources, and download permitted originals. Demo managers and viewers are members of the seeded workspaces. Newly created workspaces require an administrator to grant membership before other users can access them. Upload validation includes extension/content checks, size limits, safe storage names, and workspace-level duplicate handling. Queries are built using parameterized database operations.
 
-For a deployment beyond localhost, place the frontend behind an HTTPS reverse proxy, set `COOKIE_SECURE=true`, configure permitted origins, choose private database credentials, disable demo seeding, and back up both database and document storage together. The single-process parsing pipeline is suitable for this proof of concept; very large file collections should use a dedicated job queue and worker pool. On restart, interrupted processing jobs are marked failed so users can explicitly re-index them. Schema changes are managed with Alembic; run `alembic upgrade head` from `backend/` before starting against an existing database (the provided scripts and Docker startup do this).
+For a deployment beyond localhost, place the frontend behind an HTTPS reverse proxy, set `COOKIE_SECURE=true`, configure permitted origins, choose private database credentials, disable demo seeding, and back up both database and document storage together. The single-process parsing pipeline is suitable for this proof of concept; very large file collections should use a dedicated job queue and worker pool. On restart, interrupted processing jobs are marked failed so users can explicitly re-index them. Schema changes are managed with Alembic; run `alembic upgrade head` from the project root before starting against an existing database (the provided scripts and Docker startup do this).
 
 Google Drive and scheduled local/network folder synchronization are documented integration placeholders. They are shown transparently in Data Sources and do not imply an active connection. Folder selection provides immediate file import. An air-gapped installation requires that Python packages, Node packages, and Docker images be supplied beforehand.
 
@@ -242,7 +245,7 @@ The [official MCCIA logo](https://www.mcciapune.com/static/assets/images/logos/l
 
 ```powershell
 # Backend functional tests (from Doc-retriver, after setup)
-.\.venv\Scripts\python.exe -m pytest backend/tests -q
+.\.venv\Scripts\python.exe -m pytest tests -q
 
 # Frontend type checking and production build
 npm run build

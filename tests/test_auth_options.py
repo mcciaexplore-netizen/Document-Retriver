@@ -7,11 +7,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app import config
-from app.database import Base, get_db, install_search_index
-from app.main import app
-from app.models import AuditLog, LoginSession, Membership, User, Workspace
-from app.security import hash_password, verify_password
+import config
+from database import Base, get_db, install_search_index
+from main import app
+from models import AuditLog, LoginSession, Membership, User, Workspace
+from security import hash_password, verify_password
 
 
 DEMO_ACCOUNTS = [
@@ -42,9 +42,9 @@ def auth_client(monkeypatch, tmp_path):
     monkeypatch.setattr(config, "DEMO_SEED", True)
     monkeypatch.setattr(config, "ALLOW_REGISTRATION", True)
     monkeypatch.setattr(config, "STORAGE_PATH", tmp_path)
-    monkeypatch.setattr("app.indexing.STORAGE_PATH", tmp_path)
-    monkeypatch.setattr("app.indexing.SessionLocal", sessions)
-    monkeypatch.setattr("app.main.registration_attempts", defaultdict(deque))
+    monkeypatch.setattr("indexing.STORAGE_PATH", tmp_path)
+    monkeypatch.setattr("indexing.SessionLocal", sessions)
+    monkeypatch.setattr("main.registration_attempts", defaultdict(deque))
     monkeypatch.setitem(app.dependency_overrides, get_db, isolated_db)
     test_client = TestClient(app)
     yield test_client, sessions
@@ -218,7 +218,7 @@ def test_registration_rolls_back_if_session_creation_fails(auth_client, monkeypa
     def fail_session(*_args):
         raise RuntimeError("Simulated session storage failure")
 
-    monkeypatch.setattr("app.main.create_session", fail_session)
+    monkeypatch.setattr("main.create_session", fail_session)
     client = TestClient(app, raise_server_exceptions=False)
     try:
         response = client.post("/api/auth/register", json=NEW_ACCOUNT)
