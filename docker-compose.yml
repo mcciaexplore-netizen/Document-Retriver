@@ -1,0 +1,62 @@
+name: mccia-enterprise-search
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-mccia}
+      POSTGRES_USER: ${POSTGRES_USER:-mccia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mccia_local_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mccia}:${POSTGRES_PASSWORD:-mccia_local_dev}@postgres:5432/${POSTGRES_DB:-mccia}
+      STORAGE_PATH: /app/storage
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SESSION_HOURS: ${SESSION_HOURS:-12}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
+      SEARCH_RESULT_LIMIT: ${SEARCH_RESULT_LIMIT:-100}
+      AUDIT_RETENTION_DAYS: ${AUDIT_RETENTION_DAYS:-365}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@mccia.org}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Mccia@2026!}
+      MANAGER_PASSWORD: ${MANAGER_PASSWORD:-Manager@2026!}
+      VIEWER_PASSWORD: ${VIEWER_PASSWORD:-Viewer@2026!}
+      DEMO_SEED: ${DEMO_SEED:-true}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-${DEMO_SEED:-true}}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - document_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://backend:8000
+    restart: unless-stopped
+    environment:
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  document_storage:
