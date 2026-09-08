@@ -5,6 +5,7 @@ pytest.ini
 migrations/
 tests/
 Dockerfile.backend
+Dockerfile.fullstack
 scripts/
 storage/
 .tools/

@@ -1,90 +1,50 @@
-# Deploy Document Retriever
+﻿# Deploy frontend and backend together
 
-## Frontend first
+Deploy this repository as **one Render web service**, using the root `render.yaml` Blueprint. It runs the Next.js frontend and Python backend in one container with one public URL.
 
-You can deploy the frontend immediately without hosting the backend. In Vercel select the repository root (`.`), use Next.js, and leave `BACKEND_URL` unset. Remove any placeholder or localhost `BACKEND_URL` from Vercel before building. The login page will deploy and show that the document service is not connected; sign-in remains disabled until the backend is configured.
+## Steps
 
-Later, deploy the backend using the instructions below, add its real HTTPS origin as `BACKEND_URL` in Vercel, and redeploy. This enables the frontend API connection. No folder changes are required.
+1. In Render, select **New → Blueprint**.
+2. Connect `mcciaexplore-netizen/Document-Retriver`, branch `main`.
+3. Use the root `render.yaml` file.
+4. Enter `ADMIN_EMAIL` and a strong `ADMIN_PASSWORD` privately in Render.
+5. Review the paid Starter service and persistent disk cost, then deploy.
+6. Once the service is healthy, open its `https://...onrender.com` URL and sign in with the administrator credentials you entered.
 
-The repository contains two services:
+You do not need a Vercel project or a separate backend URL for this option. The existing Vercel frontend can remain deployed separately, but it is not part of the combined service.
 
-```text
-Document-Retriver/
-  package.json       Next.js application at repository root
-  package-lock.json
-  vercel.json        Vercel configuration
-  next.config.ts
-  app/               Pages and application layout
-  components/        UI components
-  lib/               Frontend API client
-  public/            Static assets
-  main.py            FastAPI application entry point
-  config.py          Backend settings
-  database.py        Database connection
-  models.py          Database models
-  requirements.txt   Python dependencies
-  alembic.ini        Migration settings
-  migrations/        Versioned database upgrades
-  tests/             Backend verification
-  Dockerfile.backend Backend container build
-  render.yaml        Optional Render backend blueprint
-  scripts/           Local development tools
-```
+## What is configured
 
-## 1. Deploy the backend
+- `Dockerfile.fullstack` builds the frontend and installs the backend dependencies.
+- `serve.py` runs migrations, starts the API on internal loopback port 8000, then starts Next.js on Render's public `PORT` (10000 by default).
+- Next.js forwards `/api/*` requests internally. Login cookies use the same public domain as the frontend.
+- The startup script adds Render's assigned public URL to the allowed origins automatically.
+- `/api/health` checks the API through the frontend, so Render only marks the service healthy when both are connected.
+- SQLite lives at `/var/data/mccia.db`; uploaded files live at `/var/data/storage`. The Blueprint attaches a persistent disk at `/var/data`.
+- Demo accounts are disabled. Registration is enabled; set `ALLOW_REGISTRATION=false` if administrators should create all accounts.
+- If either process fails, the container exits so the hosting platform can restart it.
 
-The frontend deploys from the repository root. The backend uses background document processing, a database, and local uploaded files; its current storage design needs a separate persistent server and disk.
+Keep one instance when using this SQLite configuration. Disk-backed deployments have deployment constraints and are not a zero-downtime scaling setup. Back up the database and uploaded originals. Local files and users are not transferred by Git; the hosted deployment starts with a new database.
 
-The backend also runs from the repository root, with entry point `main:app`. For an existing Render service, clear its previous `backend` Root Directory setting and use `alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT` as its Start Command. There is no `backend` directory now.
+If you add a custom domain, set `CORS_ORIGINS=https://your-domain.example` in Render. The generated Render domain remains allowed as well. Do not set the internal API port or `BACKEND_URL` for the combined container: its internal address is fixed during the frontend build.
 
-One supported configuration is provided in `render.yaml`. In Render, create a **Blueprint**, connect this GitHub repository, and select that file. This configuration selects a **paid Starter service with a persistent disk**; review the displayed cost before deploying.
+## Existing backend-only Blueprint
 
-Supply the requested variables:
+Earlier revisions of `render.yaml` described a Python backend-only service. If you already created one, leave its disk and data intact and create a new Blueprint/service for this combined Docker configuration. It uses the new name `document-retriever`. Do not delete the old disk until any required data has been migrated and verified.
 
-| Variable | Value |
-| --- | --- |
-| `ADMIN_EMAIL` | Your administrator email |
-| `ADMIN_PASSWORD` | A strong, private initial password |
-| `CORS_ORIGINS` | Your exact frontend origin, e.g. `https://document-retriever.vercel.app` |
+## Verify after deployment
 
-The blueprint persists SQLite and uploads under `/var/data`, runs migrations before startup, disables demo accounts, and enables registration. Set `ALLOW_REGISTRATION=false` if only administrators should create accounts. Initial administrator settings create a user on first startup; changing these variables later does not reset its password.
+1. Open `https://YOUR-SERVICE.onrender.com/api/health`; expect JSON with `status: ok` and the MCCIA service name.
+2. Sign in, create a workspace, upload a small CSV or PDF, search for its contents, and open its source.
+3. Sign out and sign in again.
+4. Restart the service and confirm the uploaded document still exists.
 
-Wait for the backend health check to pass. Open `https://YOUR-BACKEND.onrender.com/api/health` and confirm `status` is `ok` and `service` is `MCCIA Enterprise Document Search`. Copy the backend origin without `/api/health`.
+The repository's `scripts/smoke_test.py --url https://YOUR-SERVICE.onrender.com` automates the four-format workflow. Run it with the backend Python environment and administrator credentials supplied privately through environment variables. It creates and cleans up its own temporary workspace.
 
-If you already have a persistent Docker server, the existing `docker-compose.yml` is another option. The Render blueprint uses one backend instance with SQLite; do not scale it to multiple instances sharing separate local databases.
+## Other deployment options
 
-## 2. Deploy the frontend on Vercel
+For Vercel frontend-only deployment, use Root Directory `.`, Framework Next.js, and leave `BACKEND_URL` unset. To connect that frontend to a separately hosted API, set `BACKEND_URL` to its HTTPS origin, allow the Vercel domain in the API's `CORS_ORIGINS`, and redeploy Vercel. Vercel alone does not host this combined persistent container.
 
-Import this repository, then use these settings:
+For your own Docker host, the existing `docker-compose.yml` continues to run the frontend, backend, and PostgreSQL as separate containers. The individual Dockerfiles are preserved.
 
-| Setting | Value |
-| --- | --- |
-| Root Directory | **`.` (repository root)** |
-| Framework Preset | **Next.js** |
-| Install Command | `npm ci` |
-| Build Command | `npm run build` |
-| Output Directory | Leave the Next.js default |
-| Node.js Version | **22.x** |
-
-In the Root Directory dialog, choose the radio button beside **Document-Retriver (root)**, then Continue. The `vercel.json` file supplies the framework and commands.
-
-If this Vercel project previously used `frontend` as its Root Directory, change it to the repository root and redeploy the latest commit. The `frontend` folder has been removed. The backend is excluded from Vercel uploads by `.vercelignore`.
-
-For a connected deployment, add `BACKEND_URL=https://YOUR-BACKEND.onrender.com` in Vercel's Environment Variables. For a frontend-only deployment, leave it unset. Use the backend's actual public URL with no `/api` suffix. Apply it to each environment you deploy. Localhost addresses refer to Vercel's machine, not your computer.
-
-Keep administrator passwords and database variables on the backend. Do not copy your entire local `.env` into Vercel. `FRONTEND_PORT` and `BACKEND_PORT` are local launcher settings and are unnecessary on Vercel.
-
-## 3. Connect and verify
-
-Once Vercel assigns the frontend domain, update the backend's `CORS_ORIGINS` to that exact `https://...` origin if it differs from the value entered earlier. Multiple trusted origins can be comma-separated. Preview deployments need their exact origins added too; do not use a wildcard for authenticated requests.
-
-1. Open `https://YOUR-FRONTEND.vercel.app/api/health` and check for the document service's healthy response.
-2. Sign in using the administrator credentials configured on the backend.
-3. Create a workspace, upload a small CSV or PDF, search its contents, and open its source.
-4. Sign out and sign in again to verify the session cookie.
-
-If login returns 403, check `CORS_ORIGINS`. If the API returns 502 or a connection error, check the backend health and `BACKEND_URL`. Rebuild/redeploy Vercel after changing `BACKEND_URL`: Next.js fixes the rewrite destination during the build.
-
-Existing local documents, users, and databases are not uploaded by Git. A new deployment starts with its own database. Hosting accounts and deployed URLs must be configured before a live deployment can be verified.
-
-References: [Vercel monorepos](https://vercel.com/docs/monorepos), [Render blueprints](https://render.com/docs/blueprint-spec), [Render persistent disks](https://render.com/docs/disks).
+References: [Render Blueprints](https://render.com/docs/infrastructure-as-code), [Docker on Render](https://render.com/docs/docker), [persistent disks](https://render.com/docs/disks), [Render environment variables](https://render.com/docs/environment-variables).

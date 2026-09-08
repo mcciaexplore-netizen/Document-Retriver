@@ -10,6 +10,9 @@ node_modules
 .runtime
 storage
 **/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.sqlite*
 **/*.log
 test-results
 playwright-report
