@@ -10,7 +10,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { api, json, ApiError } from "@/lib/api";
+import { api, json, ApiError, backendConfigured } from "@/lib/api";
 import { FileIcon, ErrorBox } from "@/components/ui";
 import type { User } from "@/types";
 import { Logo } from "@/components/shared";
@@ -194,14 +194,16 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
           {connectionError && (
             <div role="status">
               <ErrorBox message={connectionError} />
-              <button
-                type="button"
-                className="button small"
-                disabled={optionsLoading}
-                onClick={() => setOptionsAttempt((attempt) => attempt + 1)}
-              >
-                {optionsLoading ? "Connecting…" : "Retry connection"}
-              </button>
+              {backendConfigured && (
+                <button
+                  type="button"
+                  className="button small"
+                  disabled={optionsLoading}
+                  onClick={() => setOptionsAttempt((attempt) => attempt + 1)}
+                >
+                  {optionsLoading ? "Connecting…" : "Retry connection"}
+                </button>
+              )}
             </div>
           )}
           {mode === "register" && (
@@ -275,7 +277,10 @@ export function Login({ onLogin }: { onLogin: (u: User) => void }) {
               />
             </label>
           )}
-          <button className="button primary" disabled={busy}>
+          <button
+            className="button primary"
+            disabled={busy || !backendConfigured}
+          >
             {mode === "register"
               ? busy
                 ? "Creating your workspace…"

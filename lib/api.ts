@@ -1,3 +1,6 @@
+export const backendConfigured =
+  process.env.NEXT_PUBLIC_BACKEND_CONFIGURED !== "false";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -10,6 +13,12 @@ export async function api<T = any>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  if (!backendConfigured) {
+    throw new ApiError(
+      503,
+      "The document service is not connected yet. Sign-in and document features will be available once it is connected.",
+    );
+  }
   let response: Response;
   try {
     response = await fetch(`/api${path}`, {

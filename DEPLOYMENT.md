@@ -1,5 +1,11 @@
 # Deploy Document Retriever
 
+## Frontend first
+
+You can deploy the frontend immediately without hosting the backend. In Vercel select the repository root (`.`), use Next.js, and leave `BACKEND_URL` unset. Remove any placeholder or localhost `BACKEND_URL` from Vercel before building. The login page will deploy and show that the document service is not connected; sign-in remains disabled until the backend is configured.
+
+Later, deploy the backend using the instructions below, add its real HTTPS origin as `BACKEND_URL` in Vercel, and redeploy. This enables the frontend API connection. No folder changes are required.
+
 The repository contains two services:
 
 ```text
@@ -64,7 +70,7 @@ In the Root Directory dialog, choose the radio button beside **Document-Retriver
 
 If this Vercel project previously used `frontend` as its Root Directory, change it to the repository root and redeploy the latest commit. The `frontend` folder has been removed. The backend is excluded from Vercel uploads by `.vercelignore`.
 
-Add `BACKEND_URL=https://YOUR-BACKEND.onrender.com` in Vercel's Environment Variables before deploying. Use the backend's actual public URL with no `/api` suffix. Apply it to each environment you deploy. Localhost addresses refer to Vercel's machine, not your computer.
+For a connected deployment, add `BACKEND_URL=https://YOUR-BACKEND.onrender.com` in Vercel's Environment Variables. For a frontend-only deployment, leave it unset. Use the backend's actual public URL with no `/api` suffix. Apply it to each environment you deploy. Localhost addresses refer to Vercel's machine, not your computer.
 
 Keep administrator passwords and database variables on the backend. Do not copy your entire local `.env` into Vercel. `FRONTEND_PORT` and `BACKEND_PORT` are local launcher settings and are unnecessary on Vercel.
 

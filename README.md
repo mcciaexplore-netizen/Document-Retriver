@@ -4,7 +4,7 @@ Private enterprise search, evidence retrieval, and audit for MSMEs and MCCIA tea
 
 The project lives directly in **Doc-retriver/**.
 
-For hosted deployment, see **[DEPLOYMENT.md](DEPLOYMENT.md)**. In Vercel select **`.` (repository root)** as the Root Directory and set `BACKEND_URL` to your deployed backend origin. The optional root `render.yaml` configures a persistent backend service.
+For hosted deployment, see **[DEPLOYMENT.md](DEPLOYMENT.md)**. In Vercel select **`.` (repository root)** as the Root Directory. You can deploy the frontend first with `BACKEND_URL` unset, then add the deployed backend origin and redeploy when it is ready. The optional root `render.yaml` configures a persistent backend service.
 
 ## Start with Docker
 
