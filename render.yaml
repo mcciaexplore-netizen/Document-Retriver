@@ -29,4 +29,4 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
       - key: CORS_ORIGINS
-        sync: false
+        value: https://document-retriver-4xyb.vercel.app
