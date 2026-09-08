@@ -37,7 +37,8 @@ const backendUrl = (
 const config: NextConfig = {
   env: { NEXT_PUBLIC_BACKEND_CONFIGURED: backendUrl ? "true" : "false" },
   turbopack: { root: process.cwd() },
-  output: "standalone",
+  // Vercel's adapter packages the app itself; standalone output is for Docker.
+  output: process.env.VERCEL ? undefined : "standalone",
   poweredByHeader: false,
   async rewrites() {
     if (!backendUrl) return [];
