@@ -1,7 +1,0 @@
-import {createContext,useContext,useState,useEffect,ReactNode} from 'react';
-import {useQueryClient} from '@tanstack/react-query';
-import {api} from '../services/api';
-import {User} from '../types';
-const Context=createContext<any>(null);
-export function SessionProvider({children}:{children:ReactNode}){const [user,setUser]=useState<User|null>(null),[loading,setLoading]=useState(true),[factory,setFactory]=useState('');const qc=useQueryClient();function logout(){sessionStorage.removeItem('voicelytics-token');setUser(null);qc.clear();}useEffect(()=>{if(sessionStorage.getItem('voicelytics-token'))api.get('/auth/me').then(r=>{setUser(r.data);setFactory(String(r.data.factory_id));}).catch(logout).finally(()=>setLoading(false));else setLoading(false);window.addEventListener('session-expired',logout);return()=>window.removeEventListener('session-expired',logout);},[]);async function login(email:string,password:string){const {data}=await api.post('/auth/login',{email,password});sessionStorage.setItem('voicelytics-token',data.access_token);qc.clear();setUser(data.user);setFactory(String(data.user.factory_id));}return <Context.Provider value={{user,loading,login,logout,factory,setFactory}}>{children}</Context.Provider>;}
-export const useSession=()=>useContext(Context) as {user:User|null;loading:boolean;login:(email:string,password:string)=>Promise<void>;logout:()=>void;factory:string;setFactory:(s:string)=>void};
