@@ -1,0 +1,33 @@
+# Optional backend host for the Vercel frontend. Persistent disks require a paid service.
+services:
+  - type: web
+    name: document-retriever-api
+    runtime: python
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    disk:
+      name: document-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: DATABASE_URL
+        value: sqlite:////var/data/mccia.db
+      - key: STORAGE_PATH
+        value: /var/data/storage
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: DEMO_SEED
+        value: "false"
+      - key: ALLOW_REGISTRATION
+        value: "true"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
