@@ -1,16 +1,13 @@
-# FastAPI backend for a separate Vercel frontend.
+# Free test backend for a separate Vercel frontend.
+# SQLite and uploads under /app/storage are ephemeral without a paid disk.
 services:
   - type: web
     name: document-retriever-api
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: ./backend/Dockerfile.backend
     dockerContext: .
     healthCheckPath: /api/health
-    disk:
-      name: document-data
-      mountPath: /app/storage
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         value: sqlite:////app/storage/mccia.db
