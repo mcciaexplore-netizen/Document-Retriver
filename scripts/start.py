@@ -10,10 +10,10 @@ import subprocess
 import sys
 import time
 from urllib.request import ProxyHandler, build_opener
-
 from dotenv import dotenv_values
 
 ROOT = Path(__file__).resolve().parents[1]
+FRONTEND = ROOT / "frontend"
 SERVICE = "MCCIA Enterprise Document Search"
 HTTP = build_opener(ProxyHandler({}))
 
@@ -34,8 +34,9 @@ def occupied(port: int) -> bool:
 
 
 def main() -> int:
-    settings = {**os.environ, **{k: v for k, v in dotenv_values(ROOT / ".env").items() if v is not None}}
-    backend_port = int(settings.get("BACKEND_PORT", "8000"))
+    local_settings = {key: value for key, value in dotenv_values(ROOT / ".env").items() if value is not None}
+    settings = {**local_settings, **os.environ}
+    backend_port = int(settings.get("BACKEND_PORT", "8001"))
     frontend_port = int(settings.get("FRONTEND_PORT", "3000"))
     if not all(1 <= port <= 65535 for port in (backend_port, frontend_port)):
         raise RuntimeError("Service ports must be between 1 and 65535.")
@@ -47,9 +48,9 @@ def main() -> int:
     settings["NEXT_TELEMETRY_DISABLED"] = "1"
     settings.setdefault("CORS_ORIGINS", f"{frontend_url},http://localhost:{frontend_port}")
     node = shutil.which("node")
-    next_cli = ROOT / "node_modules/next/dist/bin/next"
+    next_cli = FRONTEND / "node_modules/next/dist/bin/next"
     if not node or not next_cli.is_file():
-        raise RuntimeError("Install Node.js and run npm ci in the project root first.")
+        raise RuntimeError("Install Node.js and run npm ci --prefix frontend first.")
     children: list[subprocess.Popen] = []
 
     def start(command, directory):
@@ -70,15 +71,15 @@ def main() -> int:
     try:
         if not healthy(backend_url):
             if occupied(backend_port):
-                raise RuntimeError(f"Port {backend_port} belongs to another service. Change BACKEND_PORT in .env.")
-            subprocess.run([sys.executable, "-m", "alembic", "upgrade", "head"], cwd=ROOT, env=settings, check=True)
-            child = start([sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", str(backend_port)], ROOT)
+                raise RuntimeError(f"Port {backend_port} belongs to another service. Set BACKEND_PORT to a free port.")
+            subprocess.run([sys.executable, "-m", "alembic", "-c", "backend/alembic.ini", "upgrade", "head"], cwd=ROOT, env=settings, check=True)
+            child = start([sys.executable, "-m", "uvicorn", "main:app", "--app-dir", "backend", "--host", "127.0.0.1", "--port", str(backend_port)], ROOT)
             wait_ready(backend_url, child)
         print(f"Backend ready: {backend_url}", flush=True)
         if not healthy(frontend_url):
             if occupied(frontend_port):
                 raise RuntimeError(f"Port {frontend_port} is busy but its document API is unavailable. Stop the old frontend and run this launcher again.")
-            child = start([node, str(next_cli), "dev", "--hostname", "127.0.0.1", "--port", str(frontend_port)], ROOT)
+            child = start([node, str(next_cli), "dev", "--hostname", "127.0.0.1", "--port", str(frontend_port)], FRONTEND)
             wait_ready(frontend_url, child)
         print(f"App ready: {frontend_url} (frontend API connection verified). Press Ctrl+C to stop services started here.", flush=True)
         while children:

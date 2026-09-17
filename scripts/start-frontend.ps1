@@ -1,9 +1,9 @@
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'load-env.ps1')
 $projectPath = Split-Path -Parent $PSScriptRoot
-Set-Location -LiteralPath $projectPath
+Set-Location -LiteralPath (Join-Path $projectPath 'frontend')
 if (-not $env:BACKEND_URL) {
-    $backendPort = if ($env:BACKEND_PORT) { $env:BACKEND_PORT } else { '8000' }
+    $backendPort = if ($env:BACKEND_PORT) { $env:BACKEND_PORT } else { '8001' }
     $env:BACKEND_URL = "http://127.0.0.1:$backendPort"
 }
 $frontendPort = if ($env:FRONTEND_PORT) { $env:FRONTEND_PORT } else { '3000' }

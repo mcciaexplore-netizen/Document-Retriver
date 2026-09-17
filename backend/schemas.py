@@ -78,6 +78,7 @@ class SearchInput(BaseModel):
     workspace_id: int = Field(gt=0)
     filters: SearchFilters = Field(default_factory=SearchFilters)
     limit: int = Field(default=100, ge=1, le=500)
+    precise: bool = False
 
 
 class MembershipInput(BaseModel):

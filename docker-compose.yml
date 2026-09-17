@@ -19,12 +19,18 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: backend/Dockerfile.backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-mccia}:${POSTGRES_PASSWORD:-mccia_local_dev}@postgres:5432/${POSTGRES_DB:-mccia}
+      DATABASE_URL: ${DATABASE_URL:-}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-mccia}
+      POSTGRES_USER: ${POSTGRES_USER:-mccia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mccia_local_dev}
       STORAGE_PATH: /app/storage
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      FRONTEND_PORT: ${FRONTEND_PORT:-3000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       SESSION_HOURS: ${SESSION_HOURS:-12}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-25}
@@ -47,6 +53,7 @@ services:
   frontend:
     build:
       context: .
+      dockerfile: frontend/Dockerfile
       args:
         BACKEND_URL: http://backend:8000
     restart: unless-stopped

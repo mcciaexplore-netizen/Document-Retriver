@@ -1,6 +1,9 @@
 # Local configuration and credentials
 .env
 .env.local
+.env.*
+!.env.example
+!.env.production.example
 *.local
 
 # JavaScript / Next.js

@@ -3,15 +3,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseEnv } from "node:util";
 
-// Direct npm starts must use the same local API as the PowerShell launchers.
-// Process/container settings take precedence over the root development file.
-const envPath = resolve(process.cwd(), ".env");
+// Next.js runs from frontend/, while local Compose and launchers share root .env.
+// Hosting dashboard / process settings always win over the local file.
+const localEnvPath = resolve(process.cwd(), "..", ".env");
 const localEnv =
-  !process.env.VERCEL && existsSync(envPath)
-    ? parseEnv(readFileSync(envPath, "utf8"))
+  !process.env.VERCEL && existsSync(localEnvPath)
+    ? parseEnv(readFileSync(localEnvPath, "utf8"))
     : {};
-if (process.env.VERCEL && process.env.BACKEND_URL) {
+if (process.env.VERCEL) {
   const value = process.env.BACKEND_URL;
+  if (!value) {
+    throw new Error("BACKEND_URL is required for Vercel builds. Set it to the public HTTPS backend origin before deploying.");
+  }
   const target = new URL(value);
   if (
     target.protocol !== "https:" ||
@@ -32,7 +35,7 @@ const backendUrl = (
   localEnv.BACKEND_URL ||
   (process.env.VERCEL
     ? ""
-    : `http://127.0.0.1:${process.env.BACKEND_PORT || localEnv.BACKEND_PORT || "8000"}`)
+    : `http://127.0.0.1:${process.env.BACKEND_PORT || localEnv.BACKEND_PORT || "8001"}`)
 ).replace(/\/+$/, "");
 const config: NextConfig = {
   env: { NEXT_PUBLIC_BACKEND_CONFIGURED: backendUrl ? "true" : "false" },

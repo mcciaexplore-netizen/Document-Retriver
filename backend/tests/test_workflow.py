@@ -37,6 +37,22 @@ def test_auth_session_and_origin(client):
     assert client.get("/api/auth/me").status_code == 401
 
 
+def test_cors_local_frontend(client):
+    allowed = client.options(
+        "/api/auth/login",
+        headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "POST"},
+    )
+    assert allowed.status_code == 200
+    assert allowed.headers["access-control-allow-origin"] == "http://localhost:3000"
+    assert allowed.headers["access-control-allow-credentials"] == "true"
+
+    rejected = client.options(
+        "/api/auth/login",
+        headers={"Origin": "https://untrusted.example", "Access-Control-Request-Method": "POST"},
+    )
+    assert rejected.status_code == 400
+
+
 def test_seed_precise_excel_evidence(admin):
     workspaces = admin.get("/api/workspaces").json()
     finance = next(w for w in workspaces if w["name"] == "Finance")

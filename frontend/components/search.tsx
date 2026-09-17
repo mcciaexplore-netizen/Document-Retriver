@@ -7,7 +7,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   Download,
-  SlidersHorizontal,
   X,
   Link2,
   CheckCheck,
@@ -33,35 +32,27 @@ export function SearchPage({
   toast,
 }: any) {
   const [q, setQ] = useState(initialQuery),
-    [filters, setFilters] = useState<Record<string, string>>({}),
-    [files, setFiles] = useState<any[]>([]),
     [result, setResult] = useState<any>(null),
     [history, setHistory] = useState<any[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [showFilters, setShowFilters] = useState(true),
     [exporting, setExporting] = useState(false);
   const request = useRef(0);
   const lastRequest = useRef<any>(null);
   useEffect(() => {
-    api<any[]>(`/files?workspace_id=${workspace}`)
-      .then(setFiles)
-      .catch(() => {});
     api<any[]>(`/search/history?workspace_id=${workspace}`)
       .then(setHistory)
       .catch(() => {});
   }, [workspace, refresh]);
   const run = useCallback(
-    async (query: string, f: Record<string, string>) => {
+    async (query: string) => {
       const id = ++request.current;
       setBusy(true);
       setError("");
       const body = {
         query,
         workspace_id: workspace,
-        filters: Object.fromEntries(
-          Object.entries(f).filter(([, v]) => v !== ""),
-        ),
+        filters: {},
       };
       try {
         const data = await api("/search", json(body));
@@ -84,10 +75,8 @@ export function SearchPage({
     [workspace],
   );
   useEffect(() => {
-    if (initialQuery) run(initialQuery, {});
+    if (initialQuery) run(initialQuery);
   }, [initialQuery, run]);
-  const field = (name: string, value: string) =>
-    setFilters((f) => ({ ...f, [name]: value }));
   const results: Evidence[] = result?.results || [];
   async function exportResults() {
     if (!lastRequest.current) return;
@@ -118,7 +107,7 @@ export function SearchPage({
         className="search-bar"
         onSubmit={(e) => {
           e.preventDefault();
-          run(q, filters);
+          run(q);
         }}
       >
         <Search size={22} />
@@ -144,16 +133,6 @@ export function SearchPage({
         </button>
       </form>
       <div className="search-toolbar">
-        <button
-          className={`button small ${showFilters ? "selected" : ""}`}
-          onClick={() => setShowFilters((v) => !v)}
-        >
-          <SlidersHorizontal size={16} />
-          Filters
-          {Object.values(filters).filter(Boolean).length > 0 && (
-            <b>{Object.values(filters).filter(Boolean).length}</b>
-          )}
-        </button>
         <span>
           Keywords · "exact phrases" · AND / OR / NOT · numeric ranges
         </span>
@@ -168,169 +147,7 @@ export function SearchPage({
           </button>
         )}
       </div>
-      <div className={`search-layout ${showFilters ? "" : "no-filters"}`}>
-        {showFilters && (
-          <aside className="filter-panel">
-            <div className="section-heading">
-              <h3>Narrow your search</h3>
-              <button
-                className="text-button"
-                onClick={() => {
-                  setFilters({});
-                  if (result) run(q, {});
-                }}
-              >
-                Clear
-              </button>
-            </div>
-            <label>
-              File type
-              <select
-                value={filters.file_type || ""}
-                onChange={(e) => field("file_type", e.target.value)}
-              >
-                <option value="">All file types</option>
-                {["xlsx", "csv", "pdf", "pptx"].map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              File
-              <select
-                value={filters.file_id || ""}
-                onChange={(e) => field("file_id", e.target.value)}
-              >
-                <option value="">All documents</option>
-                {files.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.filename}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Sheet
-              <input
-                placeholder="e.g. West Region"
-                value={filters.sheet || ""}
-                onChange={(e) => field("sheet", e.target.value)}
-              />
-            </label>
-            <div className="form-two">
-              <label>
-                Page
-                <input
-                  type="number"
-                  min="1"
-                  value={filters.page || ""}
-                  onChange={(e) => field("page", e.target.value)}
-                />
-              </label>
-              <label>
-                Slide
-                <input
-                  type="number"
-                  min="1"
-                  value={filters.slide || ""}
-                  onChange={(e) => field("slide", e.target.value)}
-                />
-              </label>
-            </div>
-            <label>
-              Source
-              <select
-                value={filters.source || ""}
-                onChange={(e) => field("source", e.target.value)}
-              >
-                <option value="">All sources</option>
-                <option value="upload">File upload</option>
-                <option value="local_folder">Folder import</option>
-                <option value="demo">Demo files</option>
-              </select>
-            </label>
-            <label>
-              Uploaded from
-              <input
-                type="date"
-                value={filters.date_from || ""}
-                onChange={(e) => field("date_from", e.target.value)}
-              />
-            </label>
-            <label>
-              Uploaded to
-              <input
-                type="date"
-                value={filters.date_to || ""}
-                onChange={(e) => field("date_to", e.target.value)}
-              />
-            </label>
-            <div className="form-two">
-              <label>
-                Amount min
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="0"
-                  value={filters.amount_min || ""}
-                  onChange={(e) => field("amount_min", e.target.value)}
-                />
-              </label>
-              <label>
-                Amount max
-                <input
-                  type="number"
-                  step="any"
-                  placeholder="Any"
-                  value={filters.amount_max || ""}
-                  onChange={(e) => field("amount_max", e.target.value)}
-                />
-              </label>
-            </div>
-            <label>
-              Column / header
-              <input
-                placeholder="e.g. Total Spending"
-                value={filters.header || ""}
-                onChange={(e) => field("header", e.target.value)}
-              />
-            </label>
-            <label>
-              Category
-              <input
-                placeholder="e.g. Finance"
-                value={filters.category || ""}
-                onChange={(e) => field("category", e.target.value)}
-              />
-            </label>
-            <label>
-              Keyword
-              <input
-                value={filters.keyword || ""}
-                onChange={(e) => field("keyword", e.target.value)}
-                placeholder="Additional keyword"
-              />
-            </label>
-            <label>
-              Status
-              <select
-                value={filters.status || ""}
-                onChange={(e) => field("status", e.target.value)}
-              >
-                <option value="">All indexed evidence</option>
-                <option value="indexed">Indexed</option>
-              </select>
-            </label>
-            <button
-              className="button primary"
-              disabled={busy}
-              onClick={() => run(q, filters)}
-            >
-              Apply filters
-            </button>
-          </aside>
-        )}
-        <div className="results-main">
+      <div className="results-main">
           {error && <ErrorBox message={error} />}{" "}
           {busy ? (
             <div aria-busy="true">
@@ -441,14 +258,13 @@ export function SearchPage({
               ) : (
                 <Empty
                   title="No matching evidence"
-                  description="Try fewer keywords, check an exact ID, or broaden your filters."
+                  description="Try fewer keywords or check an exact ID."
                   action={
                     <button
                       className="button"
                       onClick={() => {
-                        setFilters({});
                         setQ("");
-                        run("", {});
+                        run("");
                       }}
                     >
                       Browse all indexed records
@@ -474,7 +290,7 @@ export function SearchPage({
                     key={s}
                     onClick={() => {
                       setQ(s);
-                      run(s, filters);
+                      run(s);
                     }}
                   >
                     <Search size={16} />
@@ -491,8 +307,7 @@ export function SearchPage({
                       key={i}
                       onClick={() => {
                         setQ(h.query);
-                        setFilters(h.filters || {});
-                        run(h.query, h.filters || {});
+                        run(h.query);
                       }}
                     >
                       <History size={15} />
@@ -504,7 +319,6 @@ export function SearchPage({
               )}
             </div>
           )}
-        </div>
       </div>
     </>
   );

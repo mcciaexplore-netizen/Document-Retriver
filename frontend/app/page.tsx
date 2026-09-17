@@ -12,7 +12,6 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
-  ShieldCheck,
   Plus,
   Menu,
   X,
@@ -36,9 +35,9 @@ import { SettingsPage } from "@/components/settings";
 
 const NAV = [
   ["dashboard", "Dashboard", LayoutDashboard],
-  ["search", "Enterprise Search", Search],
+  ["search", "Search", Search],
   ["files", "Files", Files],
-  ["sources", "Data Sources", Database],
+  ["sources", "Sources", Database],
   ["workspaces", "Workspaces", Layers],
   ["audit", "Audit", History],
   ["cases", "Use Cases", BriefcaseBusiness],
@@ -131,7 +130,6 @@ export default function Application() {
       <aside className={`sidebar ${menu ? "open" : ""}`}>
         <Logo />
         <div className="workspace-switch">
-          <span>YOUR WORKSPACE</span>
           <div>
             <Layers size={18} />
             <select
@@ -161,19 +159,11 @@ export default function Application() {
               >
                 <Icon size={19} />
                 {label}
-                {page === id && <span className="nav-dot" />}
               </button>
             ),
           )}
         </nav>
         <div className="sidebar-bottom">
-          <div className="private-label">
-            <ShieldCheck size={19} />
-            <div>
-              <strong>Private by design</strong>
-              <span>Inside your infrastructure</span>
-            </div>
-          </div>
           <div className="user-block">
             <span className="avatar">
               {user.name?.slice(0, 2).toUpperCase() || "MC"}

@@ -38,16 +38,16 @@ if ($LASTEXITCODE -ne 0) {
     throw 'The project Python cannot run. If Windows Application Control blocks it, use an approved Python installation, then run .\scripts\setup.ps1 -Python C:\path\to\python.exe.'
 }
 if (Test-Path -LiteralPath $localUv) {
-    & $localUv pip install --python $venvPython -r requirements.txt
+    & $localUv pip install --python $venvPython -r backend/requirements.txt
 } else {
-    & $venvPython -m pip install -r requirements.txt
+    & $venvPython -m pip install -r backend/requirements.txt
 }
 if ($LASTEXITCODE -ne 0) { throw 'Python dependency installation failed.' }
-& npm.cmd ci
+& npm.cmd ci --prefix frontend
 if ($LASTEXITCODE -ne 0) { throw 'Frontend dependency installation failed.' }
 
 Write-Host ''
 Write-Host 'Setup complete. Open two terminals in Doc-retriver:'
-Write-Host '  .\scripts\start-backend.ps1'
+Write-Host '  .\backend\scripts\start-backend.ps1'
 Write-Host '  .\scripts\start-frontend.ps1'
 Write-Host 'Then open http://localhost:3000'

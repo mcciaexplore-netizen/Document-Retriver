@@ -14,10 +14,8 @@ import {
   FileCheck2,
   Activity,
   Eye,
-  Link2,
   Clock3,
   FileSearch,
-  ScanText,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import {
@@ -29,7 +27,7 @@ import {
   sizeLabel,
   dateLabel,
 } from "@/components/ui";
-import { Heading, QUICK, money } from "@/components/shared";
+import { Heading, money } from "@/components/shared";
 
 export function Dashboard({
   workspace,
@@ -106,15 +104,6 @@ export function Dashboard({
             <ArrowRight size={17} />
           </button>
         </form>
-        <div className="quick-searches">
-          <span>TRY A SEARCH</span>
-          {QUICK.slice(0, 4).map((s) => (
-            <button key={s} onClick={() => onSearch(s)}>
-              {s}
-              <ArrowUpRight size={12} />
-            </button>
-          ))}
-        </div>
       </section>
       {error && <ErrorBox message={error} />}
       <div className="stats-grid">
@@ -164,31 +153,6 @@ export function Dashboard({
           </div>
         ))}
       </div>
-      <section className="workflow-section">
-        <div className="section-heading">
-          <h2>From files to verified evidence</h2>
-          <span>ONE CONNECTED WORKFLOW</span>
-        </div>
-        <div className="workflow">
-          {[
-            [Upload, "Connect files", "Upload your business documents"],
-            [ScanText, "Parse & index", "Preserve structure and context"],
-            [Search, "Search & retrieve", "Find precise keyword matches"],
-            [FileSearch, "Evidence results", "See exact source citations"],
-            [ShieldCheck, "Verify & audit", "Inspect and trace every result"],
-          ].map(([Icon, title, desc]: any, i) => (
-            <div className="workflow-step" key={title}>
-              <div className={`step-icon step-${i}`}>
-                <Icon size={21} />
-              </div>
-              <span className="step-no">0{i + 1}</span>
-              <h3>{title}</h3>
-              <p>{desc}</p>
-              {i < 4 && <ChevronRight className="step-arrow" size={16} />}
-            </div>
-          ))}
-        </div>
-      </section>
       {!data && !error ? (
         <Loading />
       ) : (
@@ -294,35 +258,6 @@ export function Dashboard({
           </section>
         </div>
       )}
-      <div className="feature-grid">
-        {[
-          [
-            Files,
-            "MULTI-FORMAT SEARCH",
-            "4 core file formats",
-            "XLSX + CSV + PDF + PPTX",
-          ],
-          [
-            ShieldCheck,
-            "PRIVATE DEPLOYMENT",
-            "Local search. Local index.",
-            "Your files stay inside your infrastructure.",
-          ],
-          [
-            Link2,
-            "VERIFIABLE RESULTS",
-            "Cell-level citations",
-            "File, tab, row, cell, page or slide",
-          ],
-        ].map(([Icon, label, title, desc]: any) => (
-          <div className="feature-card" key={label}>
-            <Icon size={22} />
-            <span>{label}</span>
-            <h3>{title}</h3>
-            <p>{desc}</p>
-          </div>
-        ))}
-      </div>
     </>
   );
 }

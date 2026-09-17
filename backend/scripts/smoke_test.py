@@ -1,7 +1,7 @@
 """Exercise a running MCCIA deployment through its public HTTP API.
 
 Creates real XLSX, CSV, PDF, and PPTX documents, then removes only the workspace
-created by this run. Install requirements.txt before running this script.
+created by this run. Install backend/requirements.txt before running this script.
 """
 from __future__ import annotations
 
@@ -59,7 +59,9 @@ def checked(response: httpx.Response, status: int | tuple[int, ...] = (200, 201)
 def run(base_url: str, email: str, password: str) -> None:
     marker = "smoke" + uuid.uuid4().hex[:12]
     workspace_id = None
-    with httpx.Client(base_url=base_url.rstrip("/"), headers={"Origin": base_url.rstrip("/")}, timeout=120, follow_redirects=True, trust_env=False) as client:
+    # A CLI client has no browser origin. Supplying the target backend itself as
+    # Origin would make direct-backend checks fail the intended CORS policy.
+    with httpx.Client(base_url=base_url.rstrip("/"), timeout=120, follow_redirects=True, trust_env=False) as client:
         checked(client.get("/api/health", timeout=10))
         print("PASS service health")
         checked(client.get("/api/workspaces"), 401)
