@@ -53,6 +53,9 @@ export function SearchPage({
         query,
         workspace_id: workspace,
         filters: {},
+        ai_api_key: localStorage.getItem("ai_api_key") || undefined,
+        ai_api_url: localStorage.getItem("ai_api_url") || undefined,
+        ai_model: localStorage.getItem("ai_model") || undefined,
       };
       try {
         const data = await api("/search", json(body));
@@ -162,7 +165,7 @@ export function SearchPage({
                 <div className="evidence-summary" style={{ borderColor: '#e1d5f2', background: '#faf6ff' }}>
                   <div className="summary-body" style={{ padding: '20px' }}>
                     <div style={{ width: '100%' }}>
-                      <p style={{ lineHeight: '1.6', whiteSpace: 'pre-wrap', fontSize: '1.05em', color: '#2d1554', margin: 0 }}>
+                      <div style={{ lineHeight: '1.6', whiteSpace: 'pre-wrap', fontSize: '1.05em', color: '#2d1554', margin: 0 }}>
                     {(() => {
                       const parts = result.ai_response.split(/(\[\d+\])/g);
                       return parts.map((part: string, i: number) => {
@@ -172,16 +175,22 @@ export function SearchPage({
                           const source = results[index];
                           if (source) {
                             return (
-                              <button key={i} type="button" onClick={() => onSource(source)} style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 6px', margin: '0 4px', cursor: 'pointer', fontSize: '0.85em' }}>
+                              <button key={i} type="button" onClick={() => onSource(source)} style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 6px', margin: '0 4px', cursor: 'pointer', fontSize: '0.85em', verticalAlign: 'middle' }}>
                                 {part}
                               </button>
                             );
                           }
                         }
-                        return <span key={i}>{part}</span>;
+                        const textParts = part.split(/(\*\*.*?\*\*)/g);
+                        return <span key={i}>{textParts.map((tPart, j) => {
+                            if (tPart.startsWith('**') && tPart.endsWith('**')) {
+                                return <strong key={j} style={{ color: 'var(--primary)' }}>{tPart.slice(2, -2)}</strong>;
+                            }
+                            return <span key={j}>{tPart}</span>;
+                        })}</span>;
                       });
                     })()}
-                      </p>
+                      </div>
                     </div>
                   </div>
                 </div>

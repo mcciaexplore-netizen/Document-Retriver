@@ -4,7 +4,7 @@ import io
 import json
 import logging
 import os
-from groq import Groq
+import httpx
 import re
 import time
 import uuid
@@ -30,6 +30,8 @@ from models import AuditLog, File, LoginSession, Membership, PDFPage, Presentati
 from schemas import LoginInput, MembershipInput, PasswordInput, RegisterInput, SearchInput, UserInput, WorkspaceInput
 from search_engine import citation_text, iso, location_for, result_json, run_search
 from security import check_workspace, create_session, current_user, hash_password, require_admin, require_editor, token_hash, verify_password, visible_workspace_ids
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 logger = logging.getLogger(__name__)
 login_attempts = defaultdict(deque)
@@ -462,25 +464,67 @@ def search(body: SearchInput, db: Session = Depends(get_db), user=Depends(curren
     # Generate AI Response if there is a natural language query and results
     ai_response = None
     if body.query and len(body.query.split()) > 2 and response.get("results"):
-        try:
-            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-            context_chunks = []
-            for i, result in enumerate(response["results"][:15]):
-                context_chunks.append(f"[{i+1}] File: {result['file']['name']} - Content: {result['content']}")
+        if body.ai_api_key:
+            try:
+                context_chunks = []
+                for i, result in enumerate(response["results"][:15]):
+                    context_chunks.append(f"[{i+1}] File: {result['file']['name']} - Content: {result['content']}")
+                
+                context = "\n\n".join(context_chunks)
+                prompt = f"You are a helpful assistant. Answer the user's question based ONLY on the provided context. Use the markers [1], [2], etc., to cite the exact source chunks you used to formulate your answer. If the context does not contain the answer, output exactly the phrase NO_ANSWER_FOUND and nothing else.\n\nContext:\n{context}\n\nQuestion: {body.query}"
+                
+                url = body.ai_api_url or "https://api.openai.com/v1/chat/completions"
+                model = body.ai_model or "gpt-3.5-turbo"
+                
+                with httpx.Client() as client:
+                    chat_response = client.post(
+                        url,
+                        headers={"Authorization": f"Bearer {body.ai_api_key}", "Content-Type": "application/json"},
+                        json={
+                            "model": model,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "temperature": 0.3
+                        },
+                        timeout=30.0
+                    )
+                    chat_response.raise_for_status()
+                    ai_response = chat_response.json()["choices"][0]["message"]["content"]
+                    
+                if "NO_ANSWER_FOUND" in ai_response:
+                    ai_response = None
+            except Exception as e:
+                ai_response = f"Failed to generate AI response: {str(e)}"
+        else:
+            # --- NO API KEY: RE-RANK RESULTS USING TF-IDF ---
+            ai_response = None
             
-            context = "\n\n".join(context_chunks)
-            prompt = f"You are a helpful assistant. Answer the user's question based ONLY on the provided context. Use the markers [1], [2], etc., to cite the exact source chunks you used to formulate your answer. If the context does not contain the answer, output exactly the phrase NO_ANSWER_FOUND and nothing else.\n\nContext:\n{context}\n\nQuestion: {body.query}"
-            
-            chat_completion = client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="openai/gpt-oss-20b",
-                temperature=0.3
-            )
-            ai_response = chat_completion.choices[0].message.content
-            if "NO_ANSWER_FOUND" in ai_response:
-                ai_response = None
-        except Exception as e:
-            ai_response = f"Failed to generate AI response: {str(e)}"
+            if response.get("results"):
+                documents = []
+                for result in response["results"]:
+                    documents.append(result.get("content", ""))
+                    
+                all_text = documents + [body.query]
+                
+                try:
+                    vectorizer = TfidfVectorizer(stop_words='english')
+                    tfidf_matrix = vectorizer.fit_transform(all_text)
+                    
+                    document_vectors = tfidf_matrix[:-1]
+                    query_vector = tfidf_matrix[-1]
+                    similarities = cosine_similarity(query_vector, document_vectors).flatten()
+                    
+                    # Update scores with TF-IDF similarities
+                    for i, result in enumerate(response["results"]):
+                        # Keep the old score as a fallback, but heavily weight the TF-IDF score
+                        # Or simply overwrite it with the 0-100 percentage score
+                        result["score"] = float(similarities[i] * 100)
+                        
+                    # Sort results by the new TF-IDF score descending
+                    response["results"].sort(key=lambda x: x["score"], reverse=True)
+                    
+                except ValueError:
+                    # Ignore if query was only stop-words
+                    pass
             
     response["ai_response"] = ai_response
 

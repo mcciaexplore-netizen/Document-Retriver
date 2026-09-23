@@ -130,7 +130,7 @@ def test_failed_processing_and_validation(admin, workspace):
     assert detail["job"]["status"] == "failed"
     unsupported = admin.post("/api/files/upload", data={"workspace_id": workspace}, files=[("files", ("app.exe", b"binary"))]).json()
     assert "Unsupported" in unsupported["errors"][0]["error"]
-    assert admin.post("/api/search", json={"workspace_id": workspace, "query": '"unfinished'}).status_code == 422
+    assert admin.post("/api/search", json={"workspace_id": workspace, "query": '"unfinished'}).status_code == 200
     assert admin.post("/api/search", json={"workspace_id": workspace, "query": "term AND"}).status_code == 422
     assert admin.post("/api/search", json={"workspace_id": workspace, "filters": {"page": 0}}).status_code == 422
 

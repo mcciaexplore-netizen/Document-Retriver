@@ -80,6 +80,9 @@ class SearchInput(BaseModel):
     filters: SearchFilters = Field(default_factory=SearchFilters)
     limit: int = Field(default=100, ge=1, le=500)
     precise: bool = False
+    ai_api_key: str | None = None
+    ai_api_url: str | None = None
+    ai_model: str | None = None
 
 
 class MembershipInput(BaseModel):

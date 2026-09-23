@@ -59,7 +59,7 @@ class BooleanQuery:
             self.tree = self.parse_or() if self.tokens else None
             if self.pos != len(self.tokens):
                 raise ValueError("Trailing tokens")
-        except (HTTPException, ValueError):
+        except ValueError:
             # Relaxed OR fallback for natural language
             self.terms = [t.strip('"').casefold() for t in self.tokens if t.upper() not in ('AND', 'OR', 'NOT', '(', ')')]
             if not self.terms:

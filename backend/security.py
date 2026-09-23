@@ -45,10 +45,14 @@ def current_user(request: Request, db: Session = Depends(get_db)):
 
 
 def require_editor(user: User = Depends(current_user)):
+    if user.role not in {"Admin", "Manager"}:
+        raise HTTPException(403, "You do not have permission to perform this action.")
     return user
 
 
 def require_admin(user: User = Depends(current_user)):
+    if user.role != "Admin":
+        raise HTTPException(403, "Administrator access is required.")
     return user
 
 
