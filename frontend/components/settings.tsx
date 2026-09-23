@@ -16,9 +16,15 @@ export function SettingsPage({ user, toast }: any) {
     [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [newPassword, setNewPassword] = useState(""),
-    [role, setRole] = useState("Viewer");
+    [role, setRole] = useState("Viewer"),
+    [aiKey, setAiKey] = useState(""),
+    [aiUrl, setAiUrl] = useState(""),
+    [aiModel, setAiModel] = useState("");
   const admin = user.role.toLowerCase() === "admin";
   useEffect(() => {
+    setAiKey(localStorage.getItem("ai_api_key") || "");
+    setAiUrl(localStorage.getItem("ai_api_url") || "");
+    setAiModel(localStorage.getItem("ai_model") || "");
     api("/settings")
       .then(setData)
       .catch((e) => setError(e.message));
@@ -150,6 +156,49 @@ export function SettingsPage({ user, toast }: any) {
               {busy ? "Updating…" : "Update password"}
             </button>
           </form>
+        </section>
+        <section className="panel settings-panel">
+          <div className="section-heading">
+            <h2>AI Assistant Settings</h2>
+            <KeyRound size={19} />
+          </div>
+          <p className="muted">Configure your API connection for advanced structured answers. Stored locally in your browser.</p>
+          <label>
+            API Base URL (Optional)
+            <input
+              type="text"
+              placeholder="https://api.openai.com/v1/chat/completions"
+              value={aiUrl}
+              onChange={(e) => {
+                setAiUrl(e.target.value);
+                localStorage.setItem("ai_api_url", e.target.value);
+              }}
+            />
+          </label>
+          <label>
+            API Model (Optional)
+            <input
+              type="text"
+              placeholder="gpt-3.5-turbo"
+              value={aiModel}
+              onChange={(e) => {
+                setAiModel(e.target.value);
+                localStorage.setItem("ai_model", e.target.value);
+              }}
+            />
+          </label>
+          <label>
+            API Key (Optional)
+            <input
+              type="password"
+              placeholder="sk-..."
+              value={aiKey}
+              onChange={(e) => {
+                setAiKey(e.target.value);
+                localStorage.setItem("ai_api_key", e.target.value);
+              }}
+            />
+          </label>
         </section>
       </div>
       {admin && (
