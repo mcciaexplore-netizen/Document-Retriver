@@ -4,6 +4,7 @@ import io
 import json
 import logging
 import os
+from groq import Groq
 import re
 import time
 import uuid
@@ -457,6 +458,32 @@ def delete_file(file_id: int, db: Session = Depends(get_db), user=Depends(requir
 def search(body: SearchInput, db: Session = Depends(get_db), user=Depends(current_user)):
     check_workspace(db, user, body.workspace_id)
     response = run_search(db, body)
+    
+    # Generate AI Response if there is a natural language query and results
+    ai_response = None
+    if body.query and len(body.query.split()) > 2 and response.get("results"):
+        try:
+            client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+            context_chunks = []
+            for i, result in enumerate(response["results"][:15]):
+                context_chunks.append(f"[{i+1}] File: {result['file']['name']} - Content: {result['content']}")
+            
+            context = "\n\n".join(context_chunks)
+            prompt = f"You are a helpful assistant. Answer the user's question based ONLY on the provided context. Use the markers [1], [2], etc., to cite the exact source chunks you used to formulate your answer. If the context does not contain the answer, output exactly the phrase NO_ANSWER_FOUND and nothing else.\n\nContext:\n{context}\n\nQuestion: {body.query}"
+            
+            chat_completion = client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model="openai/gpt-oss-20b",
+                temperature=0.3
+            )
+            ai_response = chat_completion.choices[0].message.content
+            if "NO_ANSWER_FOUND" in ai_response:
+                ai_response = None
+        except Exception as e:
+            ai_response = f"Failed to generate AI response: {str(e)}"
+            
+    response["ai_response"] = ai_response
+
     filters = body.filters.model_dump(mode="json", exclude_none=True)
     db.add(SearchHistory(user_id=user.id, workspace_id=body.workspace_id, query=body.query, filters_json=filters, result_count=response["total_results"]))
     file_ids = [file_id for file_id, in db.query(File.id).filter_by(workspace_id=body.workspace_id, processing_status="indexed")]

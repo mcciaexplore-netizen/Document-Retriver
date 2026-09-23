@@ -56,6 +56,7 @@ class SearchFilters(BaseModel):
     model_config = ConfigDict(extra="forbid")
     file_type: str | None = None
     file_id: int | None = None
+    file_ids: list[int] | None = None
     file_name: str | None = Field(default=None, max_length=255)
     date_from: date | None = None
     date_to: date | None = None

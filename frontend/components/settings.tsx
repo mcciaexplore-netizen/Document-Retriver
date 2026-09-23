@@ -167,7 +167,6 @@ export function SettingsPage({ user, toast }: any) {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
-                  <th>Role</th>
                   <th>Access</th>
                 </tr>
               </thead>
@@ -176,7 +175,6 @@ export function SettingsPage({ user, toast }: any) {
                   <tr key={u.id}>
                     <td>{u.name}</td>
                     <td>{u.email}</td>
-                    <td className="capitalize">{u.role}</td>
                     <td>
                       {u.role.toLowerCase() === "admin"
                         ? "All workspaces"
@@ -223,16 +221,7 @@ export function SettingsPage({ user, toast }: any) {
               onChange={(e) => setNewPassword(e.target.value)}
             />
           </label>
-          <label>
-            Role
-            <select value={role} onChange={(e) => setRole(e.target.value)}>
-              <option value="Viewer">Viewer · search and view sources</option>
-              <option value="Manager">
-                Manager · upload, search, and audit
-              </option>
-              <option value="Admin">Admin · full access</option>
-            </select>
-          </label>
+
           <div className="modal-actions">
             <button className="button primary" disabled={busy}>
               {busy ? "Creating…" : "Create user"}

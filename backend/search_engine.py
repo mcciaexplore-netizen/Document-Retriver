@@ -45,11 +45,29 @@ class BooleanQuery:
         self.tokens = re.findall(r'"[^"\n]+"|\(|\)|[^\s()]+', query)
         self.pos = 0
         self.terms = []
-        if query.count('"') % 2:
-            raise HTTPException(422, "Close the quotation mark to search an exact phrase.")
-        self.tree = self.parse_or() if self.tokens else None
-        if self.pos != len(self.tokens):
-            raise HTTPException(422, "Check the Boolean search syntax and parentheses.")
+        try:
+            if query.count('"') % 2:
+                raise ValueError("Unmatched quotes")
+            
+            # If the query contains no explicit boolean syntax and is a natural language sentence, default to relaxed OR search
+            upper_tokens = [t.upper() for t in self.tokens]
+            has_boolean_ops = any(op in upper_tokens for op in ('AND', 'OR', 'NOT')) or '(' in self.tokens or '"' in query
+            
+            if not has_boolean_ops and len(self.tokens) > 1:
+                raise ValueError("Natural language query fallback")
+                
+            self.tree = self.parse_or() if self.tokens else None
+            if self.pos != len(self.tokens):
+                raise ValueError("Trailing tokens")
+        except (HTTPException, ValueError):
+            # Relaxed OR fallback for natural language
+            self.terms = [t.strip('"').casefold() for t in self.tokens if t.upper() not in ('AND', 'OR', 'NOT', '(', ')')]
+            if not self.terms:
+                self.tree = None
+            else:
+                self.tree = ("term", self.terms[0])
+                for term in self.terms[1:]:
+                    self.tree = ("or", self.tree, ("term", term))
 
     def peek(self):
         return self.tokens[self.pos] if self.pos < len(self.tokens) else None
@@ -131,6 +149,8 @@ def run_search(db, request):
         query = query.filter(File.file_type == filters.file_type.lower().lstrip("."))
     if filters.file_id:
         query = query.filter(File.id == filters.file_id)
+    if filters.file_ids:
+        query = query.filter(File.id.in_(filters.file_ids))
     if filters.file_name:
         query = query.filter(func.lower(File.filename).like(f"%{escaped(filters.file_name.casefold())}%", escape="\\"))
     if filters.date_from:

@@ -44,15 +44,11 @@ def current_user(request: Request, db: Session = Depends(get_db)):
     return user
 
 
-def require_editor(user=Depends(current_user)):
-    if user.role not in ("Admin", "Manager"):
-        raise HTTPException(403, "Your Viewer role does not permit this action.")
+def require_editor(user: User = Depends(current_user)):
     return user
 
 
-def require_admin(user=Depends(current_user)):
-    if user.role != "Admin":
-        raise HTTPException(403, "Administrator access is required.")
+def require_admin(user: User = Depends(current_user)):
     return user
 
 

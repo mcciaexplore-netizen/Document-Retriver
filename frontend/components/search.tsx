@@ -158,6 +158,34 @@ export function SearchPage({
             </div>
           ) : result ? (
             <>
+              {result.ai_response && (
+                <div className="evidence-summary" style={{ borderColor: '#e1d5f2', background: '#faf6ff' }}>
+                  <div className="summary-body" style={{ padding: '20px' }}>
+                    <div style={{ width: '100%' }}>
+                      <p style={{ lineHeight: '1.6', whiteSpace: 'pre-wrap', fontSize: '1.05em', color: '#2d1554', margin: 0 }}>
+                    {(() => {
+                      const parts = result.ai_response.split(/(\[\d+\])/g);
+                      return parts.map((part: string, i: number) => {
+                        const match = part.match(/\[(\d+)\]/);
+                        if (match) {
+                          const index = parseInt(match[1]) - 1;
+                          const source = results[index];
+                          if (source) {
+                            return (
+                              <button key={i} type="button" onClick={() => onSource(source)} style={{ background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', padding: '2px 6px', margin: '0 4px', cursor: 'pointer', fontSize: '0.85em' }}>
+                                {part}
+                              </button>
+                            );
+                          }
+                        }
+                        return <span key={i}>{part}</span>;
+                      });
+                    })()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
               {results.length > 0 && (
                 <section className="evidence-summary">
                   <div className="summary-heading">

@@ -17,6 +17,7 @@ import {
   X,
   CheckCheck,
   LockKeyhole,
+  Zap,
 } from "lucide-react";
 import { api, json } from "@/lib/api";
 import { Loading, Empty } from "@/components/ui";
@@ -32,9 +33,11 @@ import { WorkspacesPage } from "@/components/workspaces";
 import { AuditPage } from "@/components/audit";
 import { UseCases } from "@/components/use-cases";
 import { SettingsPage } from "@/components/settings";
+import { QuickQueryPage } from "@/components/quick-query";
 
 const NAV = [
   ["dashboard", "Dashboard", LayoutDashboard],
+  ["quick-query", "Quick Query", Zap],
   ["search", "Search", Search],
   ["files", "Files", Files],
   ["sources", "Sources", Database],
@@ -112,9 +115,8 @@ export default function Application() {
     setPage("search");
   };
   const current = workspaces.find((w) => w.id === workspace);
-  const canWrite =
-    !!user && ["admin", "manager"].includes(user.role.toLowerCase());
-  const isAdmin = user?.role.toLowerCase() === "admin";
+  const canWrite = !!user;
+  const isAdmin = !!user;
   const changed = () => setRefresh((n) => n + 1);
   if (boot)
     return (
@@ -170,7 +172,6 @@ export default function Application() {
             </span>
             <div>
               <strong>{user.name}</strong>
-              <span className="capitalize">{user.role}</span>
             </div>
             <button
               className="icon-button"
@@ -268,6 +269,13 @@ export default function Application() {
               initialQuery={initialQuery}
               refresh={refresh}
               onSource={setSource}
+              toast={toast}
+            />
+          ) : page === "quick-query" ? (
+            <QuickQueryPage
+              workspace={workspace}
+              onSource={setSource}
+              changed={changed}
               toast={toast}
             />
           ) : page === "files" ? (
