@@ -23,13 +23,13 @@ Install Node.js 22+ and Python 3.12+, then from the repository root run:
 .\start.cmd
 ```
 
-Setup installs Python dependencies into `.venv/` and Node dependencies into `frontend/node_modules/`. The launcher starts the backend on `127.0.0.1:8001` and frontend on `127.0.0.1:3000`, runs migrations, and checks `/api/health`. You can instead use `backend/scripts/start-backend.ps1` and `scripts/start-frontend.ps1` in separate terminals.
+Setup installs Python dependencies into `.venv/` and Node dependencies into `frontend/node_modules/`. The launcher starts the backend on `127.0.0.1:8000` and frontend on `127.0.0.1:3001`, runs migrations, and checks `/api/health`. These ports allow it to run beside the CRM on 3000/4000. You can instead use `backend/scripts/start-backend.ps1` and `scripts/start-frontend.ps1` in separate terminals.
 
 The root `.env` is the shared local configuration for the Windows launchers, direct frontend starts, and Docker Compose. It is ignored by Git. Setup creates it from the tracked `.env.example` if missing; edit `.env` to change local ports or CORS origins. Explicit process environment variables take precedence over the file. For example:
 
 ```powershell
-$env:BACKEND_PORT = '8001'
-$env:FRONTEND_PORT = '3000'
+$env:BACKEND_PORT = '8000'
+$env:FRONTEND_PORT = '3001'
 .\start.cmd
 ```
 
@@ -44,14 +44,14 @@ For Docker, run `docker compose up --build`. Compose reads the same root `.env`,
 | `DATABASE_URL` | Root `mccia.db` (SQLite) | Explicit database URL; overrides Compose's PostgreSQL connection settings |
 | `POSTGRES_HOST`, `POSTGRES_PORT` | Unset / `5432` | When `POSTGRES_HOST` is set, build a PostgreSQL URL from the `POSTGRES_*` variables; Compose sets `postgres` |
 | `STORAGE_PATH` | Root `storage/` | Original uploaded files |
-| `BACKEND_PORT` | `8001` native / `8000` Compose | Published API port |
-| `FRONTEND_PORT` | `3000` | Published Next.js port |
-| `BACKEND_URL` | `http://127.0.0.1:8001` native | Next.js `/api/*` proxy destination; set before a production build |
-| `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated exact frontend origins allowed by FastAPI |
+| `BACKEND_PORT` | `8000` | Published API port |
+| `FRONTEND_PORT` | `3001` | Published Next.js port |
+| `BACKEND_URL` | `http://127.0.0.1:8000` | Next.js `/api/*` proxy destination; set before a production build |
+| `CORS_ORIGINS` | `http://localhost:3001,http://127.0.0.1:3001` | Comma-separated exact frontend origins allowed by FastAPI |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Local Compose defaults | Docker PostgreSQL bootstrap and backend connection credentials |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Demo defaults | Initial administrator; set private values before first non-demo boot |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Unset in local development | Initial administrator; set private values before first production boot |
 | `MANAGER_PASSWORD`, `VIEWER_PASSWORD` | Demo defaults | Initial demo accounts only |
-| `DEMO_SEED` | `true` | Populate demo users, workspaces, and sample files on a fresh database |
+| `DEMO_SEED` | `false` | Opt in to generated demo users, workspaces, and sample files on a fresh database |
 | `ALLOW_REGISTRATION` | Follows `DEMO_SEED` | Permit self-registration into a private workspace |
 | `COOKIE_SECURE` | `false` | Set `true` for HTTPS deployment |
 | `SESSION_HOURS` | `12` | Session lifetime |
@@ -66,7 +66,7 @@ Bootstrap passwords affect newly created accounts only; changing a variable does
 The browser requests the frontend's same-origin `/api/*`. Next.js forwards those requests to FastAPI using `BACKEND_URL`, preserving the session cookie. FastAPI also enforces `CORS_ORIGINS` for direct cross-origin browser calls. Use full origins, including scheme and port, with no path or trailing slash:
 
 ```text
-Local:  http://localhost:3000,http://127.0.0.1:3000
+Local:  http://localhost:3001,http://127.0.0.1:3001
 Hosted: https://your-frontend.vercel.app
 ```
 

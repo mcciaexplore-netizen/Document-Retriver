@@ -42,6 +42,9 @@ SEARCH_RESULT_LIMIT = int(os.getenv("SEARCH_RESULT_LIMIT", "100"))
 AUDIT_RETENTION_DAYS = int(os.getenv("AUDIT_RETENTION_DAYS", "365"))
 SESSION_HOURS = int(os.getenv("SESSION_HOURS", "12"))
 COOKIE_SECURE = os.getenv("COOKIE_SECURE", "false").lower() == "true"
-DEMO_SEED = os.getenv("DEMO_SEED", "true").lower() == "true"
+CRM_SSO_EXCHANGE_URL = os.getenv("CRM_SSO_EXCHANGE_URL", "").rstrip("/")
+CRM_SSO_SHARED_SECRET = os.getenv("CRM_SSO_SHARED_SECRET", "")
+CRM_SSO_LOCAL_MODE = os.getenv("CRM_SSO_LOCAL_MODE", "false").lower() == "true"
+DEMO_SEED = os.getenv("DEMO_SEED", "false").lower() == "true"
 ALLOW_REGISTRATION = os.getenv("ALLOW_REGISTRATION", "true" if DEMO_SEED else "false").lower() == "true"
 ALLOWED_TYPES = {"xlsx", "csv", "pdf", "pptx"}

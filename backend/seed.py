@@ -103,7 +103,9 @@ def bootstrap():
         if not admin:
             password = os.getenv("ADMIN_PASSWORD")
             if not password and not config.DEMO_SEED:
-                raise RuntimeError("Set ADMIN_PASSWORD before starting with DEMO_SEED=false.")
+                if os.getenv("ENVIRONMENT", "production").lower() != "development":
+                    raise RuntimeError("Set ADMIN_PASSWORD before starting with DEMO_SEED=false.")
+                return
             admin = User(name="MCCIA Admin", email=admin_email, role="Admin", password_hash=hash_password(password or "Mccia@2026!"))
             db.add(admin)
             db.commit()

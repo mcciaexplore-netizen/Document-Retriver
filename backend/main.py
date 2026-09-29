@@ -1,17 +1,21 @@
 import csv
+import base64
 import hashlib
+import hmac
 import io
 import json
 import logging
 import os
 import httpx
 import re
+import secrets
 import time
 import uuid
 from collections import Counter, defaultdict, deque
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Lock
 from typing import Annotated
 
 import fitz
@@ -30,12 +34,12 @@ from models import AuditLog, File, LoginSession, Membership, PDFPage, Presentati
 from schemas import LoginInput, MembershipInput, PasswordInput, RegisterInput, SearchInput, UserInput, WorkspaceInput
 from search_engine import citation_text, iso, location_for, result_json, run_search
 from security import check_workspace, create_session, current_user, hash_password, require_admin, require_editor, token_hash, verify_password, visible_workspace_ids
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 logger = logging.getLogger(__name__)
 login_attempts = defaultdict(deque)
 registration_attempts = defaultdict(deque)
+local_crm_sso_nonces: dict[str, int] = {}
+local_crm_sso_nonces_lock = Lock()
 
 
 @asynccontextmanager
@@ -124,6 +128,128 @@ def login(body: LoginInput, request: Request, response: Response, db: Session = 
         db.query(LoginSession).filter_by(token_hash=token_hash(previous)).delete(synchronize_session=False)
     token = create_session(db, user)
     audit(db, user, "login")
+    db.commit()
+    response.set_cookie("mccia_session", token, httponly=True, secure=config.COOKIE_SECURE, samesite="lax", max_age=config.SESSION_HOURS * 3600, path="/")
+    return {"user": user_json(user)}
+
+
+@app.post("/api/auth/sso")
+def crm_sso(body: dict, request: Request, response: Response, db: Session = Depends(get_db)):
+    code = body.get("code") if isinstance(body, dict) else None
+    local_mode = config.CRM_SSO_LOCAL_MODE and os.getenv("ENVIRONMENT", "production").lower() == "development"
+    if not isinstance(code, str):
+        raise HTTPException(401, "Invalid or expired sign-in link.")
+    if local_mode:
+        if not re.fullmatch(r"local\.[A-Za-z0-9_-]{20,1200}\.[A-Za-z0-9_-]{43}", code):
+            raise HTTPException(401, "Invalid or expired sign-in link.")
+    elif not re.fullmatch(r"[A-Za-z0-9_-]{40,50}", code):
+        raise HTTPException(401, "Invalid or expired sign-in link.")
+    exchange_url = config.CRM_SSO_EXCHANGE_URL
+    shared_secret = config.CRM_SSO_SHARED_SECRET
+    if len(shared_secret) < 32 or (not local_mode and not exchange_url):
+        raise HTTPException(503, "CRM sign-in is not configured.")
+    if not local_mode and os.getenv("ENVIRONMENT", "production").lower() == "production" and not exchange_url.startswith("https://"):
+        raise HTTPException(503, "CRM sign-in must use a secure connection.")
+
+    if local_mode:
+        try:
+            prefix, encoded_payload, supplied_signature = code.split(".")
+            unsigned_code = f"{prefix}.{encoded_payload}"
+            expected_signature = hmac.new(
+                shared_secret.encode("utf-8"), unsigned_code.encode("ascii"), hashlib.sha256
+            ).digest()
+            actual_signature = base64.urlsafe_b64decode(
+                supplied_signature + "=" * (-len(supplied_signature) % 4)
+            )
+            payload = json.loads(
+                base64.urlsafe_b64decode(
+                    encoded_payload + "=" * (-len(encoded_payload) % 4)
+                )
+            )
+            if (
+                not hmac.compare_digest(expected_signature, actual_signature)
+                or not isinstance(payload, dict)
+                or not isinstance(payload.get("subject"), str)
+                or not isinstance(payload.get("email"), str)
+                or not isinstance(payload.get("name"), str)
+                or type(payload.get("exp")) is not int
+                or payload["exp"] <= int(time.time())
+                or not isinstance(payload.get("jti"), str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{32,64}", payload["jti"])
+                or not isinstance(payload.get("state"), str)
+                or payload["state"] != body.get("state")
+            ):
+                raise ValueError("Invalid local sign-in token")
+            nonce = payload["jti"]
+            now = int(time.time())
+            with local_crm_sso_nonces_lock:
+                for used_nonce, expiry in list(local_crm_sso_nonces.items()):
+                    if expiry <= now:
+                        local_crm_sso_nonces.pop(used_nonce, None)
+                if nonce in local_crm_sso_nonces:
+                    raise ValueError("Local sign-in token was already used")
+                local_crm_sso_nonces[nonce] = payload["exp"]
+            identity = {
+                "subject": payload["subject"],
+                "email": payload["email"],
+                "name": payload["name"],
+            }
+        except (ValueError, TypeError, KeyError, base64.binascii.Error):
+            raise HTTPException(401, "Invalid or expired sign-in link.")
+    else:
+        try:
+            exchange = httpx.post(
+                exchange_url,
+                json={"code": code},
+                headers={"Authorization": f"Bearer {shared_secret}"},
+                timeout=5.0,
+            )
+            identity = exchange.json() if exchange.status_code == 200 else None
+        except (httpx.HTTPError, ValueError):
+            identity = None
+    if not isinstance(identity, dict) or not isinstance(identity.get("email"), str):
+        raise HTTPException(401, "Invalid or expired sign-in link.")
+
+    email = identity["email"].strip().lower()
+    if not email or len(email) > 254 or "@" not in email:
+        raise HTTPException(401, "Invalid CRM identity.")
+    crm_name = identity.get("name")
+    name = crm_name.strip()[:120] if isinstance(crm_name, str) else ""
+    if not name:
+        name = email.split("@", 1)[0][:120]
+    user = db.query(User).filter(func.lower(User.email) == email).first()
+    if not user:
+        try:
+            user = User(
+                name=name,
+                email=email,
+                password_hash=hash_password(secrets.token_urlsafe(32)),
+                role="Manager",
+            )
+            db.add(user)
+            db.flush()
+            workspace = Workspace(
+                name=f"{name[:100]}'s workspace",
+                description="Private workspace created from CRM sign-in.",
+                color="teal",
+            )
+            db.add(workspace)
+            db.flush()
+            db.add(Membership(workspace_id=workspace.id, user_id=user.id))
+            audit(db, user, "sso_provision", workspace.id, details={"provider": "crm"})
+        except IntegrityError:
+            db.rollback()
+            user = db.query(User).filter(func.lower(User.email) == email).first()
+            if not user:
+                raise
+    elif user.name != name:
+        user.name = name
+
+    previous = request.cookies.get("mccia_session")
+    if previous:
+        db.query(LoginSession).filter_by(token_hash=token_hash(previous)).delete(synchronize_session=False)
+    token = create_session(db, user)
+    audit(db, user, "sso_login", details={"provider": "crm"})
     db.commit()
     response.set_cookie("mccia_session", token, httponly=True, secure=config.COOKIE_SECURE, samesite="lax", max_age=config.SESSION_HOURS * 3600, path="/")
     return {"user": user_json(user)}
@@ -495,36 +621,8 @@ def search(body: SearchInput, db: Session = Depends(get_db), user=Depends(curren
             except Exception as e:
                 ai_response = f"Failed to generate AI response: {str(e)}"
         else:
-            # --- NO API KEY: RE-RANK RESULTS USING TF-IDF ---
+            # Preserve the deterministic ranking and source-aware ordering from run_search.
             ai_response = None
-            
-            if response.get("results"):
-                documents = []
-                for result in response["results"]:
-                    documents.append(result.get("content", ""))
-                    
-                all_text = documents + [body.query]
-                
-                try:
-                    vectorizer = TfidfVectorizer(stop_words='english')
-                    tfidf_matrix = vectorizer.fit_transform(all_text)
-                    
-                    document_vectors = tfidf_matrix[:-1]
-                    query_vector = tfidf_matrix[-1]
-                    similarities = cosine_similarity(query_vector, document_vectors).flatten()
-                    
-                    # Update scores with TF-IDF similarities
-                    for i, result in enumerate(response["results"]):
-                        # Keep the old score as a fallback, but heavily weight the TF-IDF score
-                        # Or simply overwrite it with the 0-100 percentage score
-                        result["score"] = float(similarities[i] * 100)
-                        
-                    # Sort results by the new TF-IDF score descending
-                    response["results"].sort(key=lambda x: x["score"], reverse=True)
-                    
-                except ValueError:
-                    # Ignore if query was only stop-words
-                    pass
             
     response["ai_response"] = ai_response
 

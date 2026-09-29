@@ -9,6 +9,16 @@ The repository contains a Next.js frontend in `frontend/` and a FastAPI backend 
 
 The browser uses the Vercel frontend's same-origin `/api/*` proxy. `BACKEND_URL` is compiled into Next.js rewrites at build time; change it in Vercel and redeploy if the API hostname changes. `CORS_ORIGINS` is enforced by FastAPI for direct cross-origin browser requests and unsafe methods. HTTP-only session cookies are issued through the proxy.
 
+## CRM Evidence Vault SSO
+
+To let an authenticated CRM user open the document dashboard without a second sign-in, deploy the `feature/crm-sso` changes to both the Vercel frontend and Render backend. Configure these values in the hosting dashboards, then redeploy:
+
+- CRM API (Render): `EVIDENCE_VAULT_CALLBACK_URL=https://final-document-retrival.vercel.app/sso/callback` and `EVIDENCE_VAULT_SHARED_SECRET`.
+- Document frontend (Vercel, build-time): `NEXT_PUBLIC_CRM_API_URL` set to the public CRM API origin with `/api`, for example `https://your-crm-api.example.com/api`.
+- Document backend (Render): `CRM_SSO_EXCHANGE_URL` set to the CRM API's `/api/auth/evidence-vault/exchange` endpoint and `CRM_SSO_SHARED_SECRET` set to the exact same value as `EVIDENCE_VAULT_SHARED_SECRET`.
+
+Use a private random secret of at least 32 characters; never commit it. The document app still requires an existing user account with the same email as the CRM account. SSO does not auto-create accounts or grant workspace memberships. Direct visits to the document app continue to use its normal sign-in page.
+
 For persistent deployment, use a paid Render service with a disk mounted at `/app/storage`, or add durable storage for both database records and uploaded originals. A managed PostgreSQL service can be configured with `DATABASE_URL`; the backend accepts `postgres://`, `postgresql://`, and `postgresql+psycopg://` URLs. Database migrations run on startup. Switching URLs does not transfer existing SQLite records, and PostgreSQL alone does not preserve uploaded files on a free web service.
 
 For Docker on your own host, `docker compose up --build` starts frontend, backend, and PostgreSQL. Supply non-demo credentials and `CORS_ORIGINS` through the host environment before deploying beyond localhost.

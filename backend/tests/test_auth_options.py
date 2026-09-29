@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 import config
 from database import Base, get_db, install_search_index
 from main import app
-from models import AuditLog, LoginSession, Membership, User, Workspace
+from models import AuditLog, File, LoginSession, Membership, User, Workspace
 from security import hash_password, verify_password
 
 
@@ -69,6 +69,98 @@ def test_public_options_offer_working_demo_accounts(auth_client):
     assert unknown.status_code == 401
     assert unknown.json()["detail"] == "The email or password is incorrect."
     assert client.get("/api/auth/me").status_code == 401
+
+
+def test_crm_sso_uses_provisioned_user_and_creates_document_session(auth_client, monkeypatch):
+    client, sessions = auth_client
+    monkeypatch.setattr(config, "CRM_SSO_EXCHANGE_URL", "https://crm.example.com/api/auth/evidence-vault/exchange")
+    monkeypatch.setattr(config, "CRM_SSO_SHARED_SECRET", "s" * 40)
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    calls = []
+
+    def exchange(url, **kwargs):
+        calls.append((url, kwargs))
+        return type("Exchange", (), {
+            "status_code": 200,
+            "json": lambda self: {"subject": "crm-user-id", "email": "ADMIN@MCCIA.ORG", "name": "CRM Admin"},
+        })()
+
+    monkeypatch.setattr("main.httpx.post", exchange)
+    response = client.post("/api/auth/sso", json={"code": "A" * 43})
+    assert response.status_code == 200, response.text
+    assert response.json()["user"]["email"] == "admin@mccia.org"
+    assert "httponly" in response.headers["set-cookie"].lower()
+    assert client.get("/api/auth/me").json()["email"] == "admin@mccia.org"
+    assert calls[0][0] == config.CRM_SSO_EXCHANGE_URL
+    assert calls[0][1]["headers"]["Authorization"] == f"Bearer {'s' * 40}"
+    with sessions() as db:
+        assert db.query(LoginSession).count() == 1
+        assert db.query(AuditLog).filter_by(action="sso_login").count() == 1
+
+
+def test_crm_sso_provisions_private_empty_workspace_for_new_user(auth_client, monkeypatch):
+    client, sessions = auth_client
+    monkeypatch.setattr(config, "CRM_SSO_EXCHANGE_URL", "https://crm.example.com/api/auth/evidence-vault/exchange")
+    monkeypatch.setattr(config, "CRM_SSO_SHARED_SECRET", "s" * 40)
+    monkeypatch.setenv("ENVIRONMENT", "test")
+    monkeypatch.setattr("main.httpx.post", lambda *_args, **_kwargs: type("Exchange", (), {
+        "status_code": 200,
+        "json": lambda self: {"subject": "crm-user-id", "email": "new.member@example.com", "name": "New Member"},
+    })())
+
+    with sessions() as db:
+        admin = db.query(User).filter_by(email="admin@mccia.org").one()
+        existing_workspace = Workspace(name="Existing demo workspace")
+        db.add(existing_workspace)
+        db.flush()
+        db.add(Membership(workspace_id=existing_workspace.id, user_id=admin.id))
+        existing_file = File(
+            workspace_id=existing_workspace.id,
+            filename="private-demo.pdf",
+            file_type="pdf",
+            file_size=1,
+            storage_key="private-demo.pdf",
+            checksum="a" * 64,
+            uploaded_by=admin.id,
+        )
+        db.add(existing_file)
+        db.commit()
+        existing_file_id = existing_file.id
+
+    response = client.post("/api/auth/sso", json={"code": "A" * 43})
+    assert response.status_code == 200, response.text
+    assert response.json()["user"]["name"] == "New Member"
+    assert client.get("/api/auth/me").json()["email"] == "new.member@example.com"
+    visible_workspaces = client.get("/api/workspaces").json()
+    assert len(visible_workspaces) == 1
+    assert visible_workspaces[0]["name"] == "New Member's workspace"
+    assert visible_workspaces[0]["file_count"] == 0
+    assert client.get(f"/api/files/{existing_file_id}").status_code == 404
+
+    second_login = client.post("/api/auth/sso", json={"code": "B" * 43})
+    assert second_login.status_code == 200
+    with sessions() as db:
+        member = db.query(User).filter_by(email="new.member@example.com").one()
+        assert db.query(User).count() == 4
+        assert db.query(Membership).filter_by(user_id=member.id).count() == 1
+        assert db.query(Workspace).count() == 2
+        assert db.query(File).count() == 1
+        assert db.query(LoginSession).count() == 1
+        assert db.query(AuditLog).filter_by(action="sso_provision").count() == 1
+
+
+def test_crm_sso_rejects_malformed_code_before_exchange(auth_client, monkeypatch):
+    client, _ = auth_client
+    called = False
+
+    def exchange(*_args, **_kwargs):
+        nonlocal called
+        called = True
+
+    monkeypatch.setattr("main.httpx.post", exchange)
+    response = client.post("/api/auth/sso", json={"code": "bad"})
+    assert response.status_code == 401
+    assert called is False
 
 
 def test_options_disable_demo_accounts(auth_client, monkeypatch):
